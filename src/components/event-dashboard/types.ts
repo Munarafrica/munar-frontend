@@ -30,6 +30,7 @@ export interface Module {
   icon: string; // Lucide icon name
   status: 'active' | 'not-started';
   actionLabel: string;
+  category?: ModuleCategory;
   iconColor?: string;
 }
 
@@ -50,6 +51,7 @@ export interface EventData {
   time: string;
   type: 'Physical' | 'Virtual' | 'Hybrid';
   websiteUrl: string;
+  currency?: 'NGN' | 'GHS' | 'ZAR';
   status: EventStatus;
   phase: EventPhase;
 }

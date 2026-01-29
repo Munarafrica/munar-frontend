@@ -13,6 +13,42 @@ interface EventHeaderProps {
 }
 
 export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNavigate }) => {
+    const handleEventSettings = () => {
+        const website = event.websiteUrl?.replace(/^https?:\/\//, '') || '';
+        const isSubdomain = website.endsWith('.munar.site');
+        const subdomain = isSubdomain ? website.replace('.munar.site', '') : '';
+        const customDomain = !isSubdomain ? website : '';
+
+        const draft = {
+            id: event.id,
+            eventName: event.name,
+            eventType: event.type,
+            domainType: isSubdomain ? 'subdomain' : 'custom',
+            subdomain,
+            customDomain,
+            description: '',
+            startDate: event.date,
+            startTime: event.time,
+            endDate: '',
+            endTime: '',
+            isRecurring: false,
+            recurringStartDate: '',
+            frequency: '',
+            customDates: [],
+            recurringStartTime: '',
+            recurringEndTime: '',
+            recurringEndType: 'date',
+            recurringEndDate: '',
+            recurringOccurrences: 1,
+            country: '',
+            venueLocation: '',
+            categories: [],
+            currency: event.currency || 'NGN',
+        };
+
+        window.localStorage.setItem('munar_event_form', JSON.stringify(draft));
+        onNavigate?.('create-event');
+    };
   return (
     <div className="w-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col md:flex-row gap-8 shadow-sm transition-colors">
         {/* Cover Image */}
@@ -70,7 +106,11 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
 
             {/* Actions Toolbar */}
             <div className="flex items-center gap-4 mt-6 md:mt-0 pt-6 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800">
-                <Button variant="outline" className="gap-2 h-9 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 bg-transparent">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleEventSettings}
+                                    className="gap-2 h-9 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 bg-transparent"
+                                >
                     <Settings className="w-4 h-4" />
                     Event Settings
                 </Button>

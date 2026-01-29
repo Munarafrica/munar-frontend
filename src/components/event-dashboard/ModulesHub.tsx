@@ -45,6 +45,8 @@ export const ModulesHub: React.FC<ModulesHubProps> = ({ modules, onNavigate }) =
         onNavigate?.('dp-maker-admin');
     } else if (moduleName === 'Event Media & Gallery') {
         onNavigate?.('gallery-admin');
+    } else if (moduleName === 'Analytics') {
+      onNavigate?.('event-analytics');
     }
   };
 

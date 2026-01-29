@@ -17,15 +17,37 @@ export const EventDashboard: React.FC<EventDashboardProps> = ({ onNavigate }) =>
   // --- MOCK DATA STATE ---
   const [phase, setPhase] = useState<EventPhase>('setup');
   
-  const [event, setEvent] = useState<EventData>({
-    id: "evt-123",
-    name: "Lagos Tech Summit 2026",
-    date: "2026-06-12",
-    time: "09:00 AM WAT",
-    type: "Hybrid",
-    websiteUrl: "https://lagostech2026.munar.site",
-    status: "draft",
-    phase: "setup"
+  const [event, setEvent] = useState<EventData>(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('munar_event_latest') : null;
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Partial<EventData>;
+        return {
+          id: parsed.id || 'evt-123',
+          name: parsed.name || 'Lagos Tech Summit 2026',
+          date: parsed.date || '2026-06-12',
+          time: parsed.time || '09:00 AM WAT',
+          type: parsed.type || 'Hybrid',
+          websiteUrl: parsed.websiteUrl || 'https://lagostech2026.munar.site',
+          currency: parsed.currency || 'NGN',
+          status: parsed.status || 'draft',
+          phase: parsed.phase || 'setup',
+        };
+      } catch {
+        // fallback below
+      }
+    }
+    return {
+      id: "evt-123",
+      name: "Lagos Tech Summit 2026",
+      date: "2026-06-12",
+      time: "09:00 AM WAT",
+      type: "Hybrid",
+      websiteUrl: "https://lagostech2026.munar.site",
+      currency: 'NGN',
+      status: "draft",
+      phase: "setup"
+    };
   });
 
   // Keep event phase in sync with demo toggle
@@ -66,6 +88,7 @@ export const EventDashboard: React.FC<EventDashboardProps> = ({ onNavigate }) =>
     { id: 'mod8', name: 'Event Media & Gallery', description: 'Customize your landing page', icon: 'globe', status: 'not-started', actionLabel: 'Manage', category: 'Growth', iconColor: 'purple' },
     { id: 'mod9', name: 'Merchandise', description: 'Sell items and add-ons', icon: 'shopping-bag', status: 'not-started', actionLabel: 'Manage', category: 'Operations', iconColor: 'gray' },
     { id: 'mod10', name: 'DP & Cover Maker', description: 'Create branded social images', icon: 'image', status: 'not-started', actionLabel: 'Manage', category: 'Growth', iconColor: 'purple' },
+    { id: 'mod11', name: 'Analytics', description: 'Overview of your event analytics', icon: 'layout', status: 'active', actionLabel: 'View', category: 'Operations', iconColor: 'indigo' },
   ];
 
   const activities: Activity[] = [
@@ -105,7 +128,7 @@ export const EventDashboard: React.FC<EventDashboardProps> = ({ onNavigate }) =>
                 <SmartSetupChecklist items={checklistItems} className="h-full" />
             </div>
             <div className="lg:col-span-2 h-full">
-                <OverviewAnalytics metrics={metrics} phase={phase} />
+              <OverviewAnalytics metrics={metrics} phase={phase} onNavigate={onNavigate} />
             </div>
         </section>
 

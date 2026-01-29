@@ -7,3 +7,4 @@ export { formsService, type CreateFormRequest, type UpdateFormRequest } from './
 export * as merchandiseService from './merchandise.service';
 export * as votingService from './voting.service';
 export * as sponsorsService from './sponsors.service';
+export { analyticsService } from './analytics.service';

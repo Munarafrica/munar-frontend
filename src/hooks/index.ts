@@ -10,3 +10,4 @@ export { useCampaigns } from './useCampaigns';
 export { useVotes } from './useVotes';
 export { useVotingAnalytics } from './useVotingAnalytics';
 export { useSponsors } from './useSponsors';
+export { useEventAnalytics } from './useAnalytics';

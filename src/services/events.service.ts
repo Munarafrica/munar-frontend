@@ -91,6 +91,7 @@ class EventsService {
         time: data.startTime,
         type: data.type,
         websiteUrl: `https://${data.subdomain || 'event'}.munar.site`,
+        currency: data.currency || config.app.defaultCurrency,
         status: 'draft',
         phase: 'setup',
       };

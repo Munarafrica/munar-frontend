@@ -3,13 +3,15 @@ import { Metric, EventPhase } from './types';
 import { ChevronRight, BarChart3 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
+import { Page } from '../../App';
 
 interface OverviewAnalyticsProps {
   metrics: Metric[];
   phase: EventPhase;
+  onNavigate?: (page: Page) => void;
 }
 
-export const OverviewAnalytics: React.FC<OverviewAnalyticsProps> = ({ metrics }) => {
+export const OverviewAnalytics: React.FC<OverviewAnalyticsProps> = ({ metrics, onNavigate }) => {
   // Mapping mock data to match the design screenshot exactly
   const displayMetrics = [
       { label: 'Tickets Sold/registrations', value: '3/5', highlight: false },
@@ -34,7 +36,12 @@ export const OverviewAnalytics: React.FC<OverviewAnalyticsProps> = ({ metrics })
             </div>
         </div>
 
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => onNavigate?.('event-analytics')}
+          className="h-8 w-8 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full"
+        >
             <ChevronRight className="w-5 h-5" />
         </Button>
       </div>

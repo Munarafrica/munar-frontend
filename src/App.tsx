@@ -20,11 +20,12 @@ import { DPMakerPublic } from './pages/DPMakerPublic';
 import { GalleryAdmin } from './pages/GalleryAdmin';
 import { GalleryPublic } from './pages/GalleryPublic';
 import { SponsorsManagement } from './pages/SponsorsManagement';
+import { EventAnalytics } from './pages/EventAnalytics';
 
 import { ThemeProvider } from "./components/theme-provider";
 import { AuthProvider } from "./contexts";
 
-export type Page = 'login' | 'signup' | 'verification' | 'account-type' | 'profile-setup' | 'forgot-password' | 'reset-password' | 'my-events' | 'create-event' | 'event-dashboard' | 'ticket-management' | 'program-management' | 'form-management' | 'merchandise-management' | 'voting-management' | 'public-vote' | 'dp-maker-admin' | 'dp-maker-public' | 'gallery-admin' | 'gallery-public' | 'sponsors-management';
+export type Page = 'login' | 'signup' | 'verification' | 'account-type' | 'profile-setup' | 'forgot-password' | 'reset-password' | 'my-events' | 'create-event' | 'event-dashboard' | 'ticket-management' | 'program-management' | 'form-management' | 'merchandise-management' | 'voting-management' | 'public-vote' | 'dp-maker-admin' | 'dp-maker-public' | 'gallery-admin' | 'gallery-public' | 'sponsors-management' | 'event-analytics';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<Page>('event-dashboard');
@@ -73,6 +74,8 @@ function App() {
         return <GalleryAdmin onNavigate={setCurrentPage} />;
       case 'gallery-public':
         return <GalleryPublic onNavigate={setCurrentPage} />;
+      case 'event-analytics':
+        return <EventAnalytics onNavigate={setCurrentPage} />;
       default:
         return <Login onNavigate={setCurrentPage} />;
     }

@@ -1,7 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { TopBar } from "../components/dashboard/TopBar";
 import { XIcon, MapPinIcon, UploadIcon } from "../components/icons";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, MapPin, Video, Monitor } from "lucide-react";
 import { Page } from "../App";
 import { cn } from "../components/ui/utils";
 
@@ -34,34 +34,47 @@ export interface EventFormData {
   recurringOccurrences: number;
   country: string;
   venueLocation: string;
+  currency: "NGN" | "GHS" | "ZAR" | "";
   categories: string[];
 }
 
 export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProps) => {
+  const initialDraft = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const stored = window.localStorage.getItem("munar_event_form");
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored) as Partial<EventFormData> & { id?: string };
+    } catch {
+      return null;
+    }
+  }, []);
+
   const [formData, setFormData] = useState<EventFormData>({
-    eventName: "",
-    eventType: null,
-    domainType: "subdomain",
-    subdomain: "",
-    customDomain: "",
+    eventName: initialDraft?.eventName || "",
+    eventType: initialDraft?.eventType || null,
+    domainType: initialDraft?.domainType || "subdomain",
+    subdomain: initialDraft?.subdomain || "",
+    customDomain: initialDraft?.customDomain || "",
     coverImage: null,
-    description: "",
-    startDate: "",
-    startTime: "",
-    endDate: "",
-    endTime: "",
-    isRecurring: false,
-    recurringStartDate: "",
-    frequency: "",
-    customDates: [],
-    recurringStartTime: "",
-    recurringEndTime: "",
-    recurringEndType: "date",
-    recurringEndDate: "",
-    recurringOccurrences: 1,
-    country: "",
-    venueLocation: "",
-    categories: [],
+    description: initialDraft?.description || "",
+    startDate: initialDraft?.startDate || "",
+    startTime: initialDraft?.startTime || "",
+    endDate: initialDraft?.endDate || "",
+    endTime: initialDraft?.endTime || "",
+    isRecurring: initialDraft?.isRecurring || false,
+    recurringStartDate: initialDraft?.recurringStartDate || "",
+    frequency: initialDraft?.frequency || "",
+    customDates: initialDraft?.customDates || [],
+    recurringStartTime: initialDraft?.recurringStartTime || "",
+    recurringEndTime: initialDraft?.recurringEndTime || "",
+    recurringEndType: initialDraft?.recurringEndType || "date",
+    recurringEndDate: initialDraft?.recurringEndDate || "",
+    recurringOccurrences: initialDraft?.recurringOccurrences || 1,
+    country: initialDraft?.country || "",
+    venueLocation: initialDraft?.venueLocation || "",
+    currency: initialDraft?.currency || "NGN",
+    categories: initialDraft?.categories || [],
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof EventFormData, string>>>({});
@@ -144,6 +157,10 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
       newErrors.country = "Country is required";
     }
 
+    if (!formData.currency) {
+      newErrors.currency = "Currency is required";
+    }
+
     if (formData.eventType === "Physical" || formData.eventType === "Hybrid") {
       if (!formData.venueLocation) {
         newErrors.venueLocation = "Venue location is required";
@@ -156,6 +173,26 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
 
   const handleContinue = () => {
     if (validateForm()) {
+      const websiteUrl = formData.domainType === "subdomain"
+        ? `https://${formData.subdomain || "event"}.munar.site`
+        : `https://${formData.customDomain}`;
+
+      const updatedEvent = {
+        id: initialDraft?.id || "evt-123",
+        name: formData.eventName,
+        date: formData.startDate,
+        time: formData.startTime,
+        type: formData.eventType || "Hybrid",
+        websiteUrl,
+        currency: formData.currency || "NGN",
+        status: "draft",
+        phase: "setup",
+      };
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("munar_event_latest", JSON.stringify(updatedEvent));
+        window.localStorage.removeItem("munar_event_form");
+      }
       onContinue?.();
     }
   };
@@ -196,10 +233,10 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
             <label className="text-[14px] font-medium text-[#0f172a] dark:text-slate-200">Event Type*</label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { type: "Physical" as const, icon: "📍", description: "Live, in-person gathering at a venue." },
-                { type: "Virtual" as const, icon: "📹", description: "Online only event via streaming." },
-                { type: "Hybrid" as const, icon: "💻", description: "Both in-person and online access." }
-              ].map(({ type, icon, description }) => (
+                { type: "Physical" as const, icon: MapPin, description: "Live, in-person gathering at a venue." },
+                { type: "Virtual" as const, icon: Video, description: "Online only event via streaming." },
+                { type: "Hybrid" as const, icon: Monitor, description: "Both in-person and online access." }
+              ].map(({ type, icon: Icon, description }) => (
                 <button
                   key={type}
                   onClick={() => handleInputChange("eventType", type)}
@@ -211,12 +248,12 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
                   )}
                 >
                   <div className={cn(
-                    "size-11 rounded-lg flex items-center justify-center text-2xl mb-4",
+                    "size-11 rounded-lg flex items-center justify-center mb-4",
                     formData.eventType === type 
-                        ? "bg-[#d7c6fe] dark:bg-indigo-800/50" 
-                        : "bg-slate-100 dark:bg-slate-900"
+                        ? "bg-[#d7c6fe] dark:bg-indigo-800/50 text-indigo-700 dark:text-indigo-200" 
+                        : "bg-slate-100 dark:bg-slate-900 text-slate-500 dark:text-slate-400"
                   )}>
-                    {icon}
+                    <Icon className="w-5 h-5" />
                   </div>
                   <h3 className="text-[16px] font-semibold text-[#262626] dark:text-slate-100 mb-2">{type}</h3>
                   <p className="text-[14px] text-[#737373] dark:text-slate-400">{description}</p>
@@ -498,6 +535,22 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
               </div>
             </>
           )}
+
+          {/* Currency */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[14px] font-medium text-[#0f172a] dark:text-slate-200">Default Currency*</label>
+            <select
+              value={formData.currency}
+              onChange={(e) => handleInputChange("currency", e.target.value)}
+              className="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-[#cbd5e1] dark:border-slate-800 rounded-md text-[14px] focus:outline-none focus:border-[#8b5cf6] transition-colors text-slate-900 dark:text-slate-100"
+            >
+              <option value="">Select currency</option>
+              <option value="NGN">Naira (₦)</option>
+              <option value="GHS">Cedis (₵)</option>
+              <option value="ZAR">Rands (R)</option>
+            </select>
+            {errors.currency && <p className="text-[12px] text-red-500">{errors.currency}</p>}
+          </div>
 
           {/* Event Domain/Subdomain */}
           <div className="flex flex-col gap-3">

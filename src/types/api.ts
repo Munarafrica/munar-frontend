@@ -110,6 +110,7 @@ export interface CreateEventRequest {
   categories?: string[];
   isRecurring?: boolean;
   recurringConfig?: RecurringEventConfig;
+  currency?: 'NGN' | 'GHS' | 'ZAR';
 }
 
 export interface RecurringEventConfig {
