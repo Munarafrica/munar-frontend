@@ -4,6 +4,9 @@ import { XIcon, MapPinIcon, UploadIcon } from "../components/icons";
 import { Calendar, Clock, MapPin, Video, Monitor } from "lucide-react";
 import { Page } from "../App";
 import { cn } from "../components/ui/utils";
+import { RichTextEditor } from "../components/ui/RichTextEditor";
+import { eventsService } from "../services";
+import { setCurrentEventId } from "../lib/event-storage";
 
 interface CreateEventProps {
   onClose?: () => void;
@@ -18,6 +21,7 @@ export interface EventFormData {
   subdomain: string;
   customDomain: string;
   coverImage: File | null;
+  coverImageUrl?: string;
   description: string;
   startDate: string;
   startTime: string;
@@ -57,6 +61,7 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
     subdomain: initialDraft?.subdomain || "",
     customDomain: initialDraft?.customDomain || "",
     coverImage: null,
+    coverImageUrl: initialDraft?.coverImageUrl || "",
     description: initialDraft?.description || "",
     startDate: initialDraft?.startDate || "",
     startTime: initialDraft?.startTime || "",
@@ -96,6 +101,7 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
     const file = e.target.files?.[0];
     if (file) {
       handleInputChange("coverImage", file);
+      handleInputChange("coverImageUrl", "");
     }
   };
 
@@ -108,6 +114,7 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith("image/")) {
       handleInputChange("coverImage", file);
+      handleInputChange("coverImageUrl", "");
     }
   };
 
@@ -171,29 +178,68 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinue = () => {
-    if (validateForm()) {
-      const websiteUrl = formData.domainType === "subdomain"
-        ? `https://${formData.subdomain || "event"}.munar.site`
-        : `https://${formData.customDomain}`;
+  const readCoverImage = (file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read cover image"));
+      reader.readAsDataURL(file);
+    });
+  };
 
-      const updatedEvent = {
-        id: initialDraft?.id || "evt-123",
-        name: formData.eventName,
-        date: formData.startDate,
-        time: formData.startTime,
-        type: formData.eventType || "Hybrid",
-        websiteUrl,
-        currency: formData.currency || "NGN",
-        status: "draft",
-        phase: "setup",
-      };
+  const handleContinue = async () => {
+    if (!validateForm()) return;
+
+    const coverImageUrl = formData.coverImage
+      ? await readCoverImage(formData.coverImage)
+      : formData.coverImageUrl || undefined;
+
+    try {
+      if (initialDraft?.id) {
+        const updated = await eventsService.updateEvent(initialDraft.id, {
+          name: formData.eventName,
+          type: formData.eventType || "Hybrid",
+          description: formData.description,
+          startDate: formData.startDate,
+          startTime: formData.startTime,
+          endDate: formData.endDate,
+          endTime: formData.endTime,
+          subdomain: formData.subdomain,
+          customDomain: formData.customDomain,
+          coverImageUrl,
+          country: formData.country,
+          venueLocation: formData.venueLocation,
+          categories: formData.categories,
+          currency: formData.currency || "NGN",
+        });
+        setCurrentEventId(updated.id);
+      } else {
+        const created = await eventsService.createEvent({
+          name: formData.eventName,
+          type: formData.eventType || "Hybrid",
+          description: formData.description,
+          startDate: formData.startDate,
+          startTime: formData.startTime,
+          endDate: formData.endDate,
+          endTime: formData.endTime,
+          subdomain: formData.subdomain,
+          customDomain: formData.customDomain,
+          coverImageUrl,
+          country: formData.country,
+          venueLocation: formData.venueLocation,
+          categories: formData.categories,
+          currency: formData.currency || "NGN",
+        });
+        setCurrentEventId(created.id);
+      }
 
       if (typeof window !== "undefined") {
-        window.localStorage.setItem("munar_event_latest", JSON.stringify(updatedEvent));
         window.localStorage.removeItem("munar_event_form");
       }
+
       onContinue?.();
+    } catch (error) {
+      console.error("Failed to save event", error);
     }
   };
 
@@ -273,7 +319,7 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
               onChange={handleFileUpload}
               className="hidden"
             />
-            {!formData.coverImage ? (
+            {!formData.coverImage && !formData.coverImageUrl ? (
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
@@ -288,12 +334,15 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
             ) : (
               <div className="relative w-full h-48 rounded-xl overflow-hidden border border-[#e5e7eb] dark:border-slate-700">
                 <img
-                  src={URL.createObjectURL(formData.coverImage)}
+                  src={formData.coverImage ? URL.createObjectURL(formData.coverImage) : formData.coverImageUrl}
                   alt="Cover preview"
                   className="w-full h-full object-cover"
                 />
                 <button
-                  onClick={() => handleInputChange("coverImage", null)}
+                  onClick={() => {
+                    handleInputChange("coverImage", null);
+                    handleInputChange("coverImageUrl", "");
+                  }}
                   className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-full transition-colors"
                 >
                   <XIcon className="size-4 text-white" />
@@ -305,17 +354,12 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
           {/* Event Description */}
           <div className="flex flex-col gap-3">
             <label className="text-[14px] font-medium text-[#0f172a] dark:text-slate-200">Event Description*</label>
-            <div className={cn(
-                "bg-white dark:bg-slate-950 rounded-lg border overflow-hidden",
-                errors.description ? 'border-red-500' : 'border-[#cbd5e1] dark:border-slate-800'
-            )}>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                placeholder="Describe your event..."
-                className="w-full min-h-[200px] p-4 bg-transparent border-none focus:ring-0 text-[14px] text-slate-900 dark:text-slate-100 placeholder:text-[#94a3b8] dark:placeholder:text-slate-600 resize-y focus:outline-none"
-              />
-            </div>
+            <RichTextEditor
+              value={formData.description}
+              onChange={(value) => handleInputChange("description", value)}
+              placeholder="Describe your event..."
+              error={!!errors.description}
+            />
             {errors.description && <p className="text-[12px] text-red-500">{errors.description}</p>}
           </div>
 

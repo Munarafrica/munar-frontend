@@ -28,7 +28,7 @@ import { AuthProvider } from "./contexts";
 export type Page = 'login' | 'signup' | 'verification' | 'account-type' | 'profile-setup' | 'forgot-password' | 'reset-password' | 'my-events' | 'create-event' | 'event-dashboard' | 'ticket-management' | 'program-management' | 'form-management' | 'merchandise-management' | 'voting-management' | 'public-vote' | 'dp-maker-admin' | 'dp-maker-public' | 'gallery-admin' | 'gallery-public' | 'sponsors-management' | 'event-analytics';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('event-dashboard');
+  const [currentPage, setCurrentPage] = useState<Page>('my-events');
 
   const renderPage = () => {
     switch (currentPage) {

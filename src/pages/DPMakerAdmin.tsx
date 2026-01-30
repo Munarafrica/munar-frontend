@@ -6,12 +6,16 @@ import { ArrowLeft, Upload, Circle, Square, Eye, Save, AlertCircle, X, Menu, Hex
 import { cn } from '../components/ui/utils';
 import { toast } from 'sonner@2.0.3';
 import { drawShape, createShapeClipPath } from '../utils/canvas-shapes';
+import { eventsService } from '../services';
+import { getCurrentEventId } from '../lib/event-storage';
 
 interface DPMakerAdminProps {
   onNavigate?: (page: Page) => void;
 }
 
 export const DPMakerAdmin: React.FC<DPMakerAdminProps> = ({ onNavigate }) => {
+  const eventId = getCurrentEventId();
+
   const [step, setStep] = useState<'upload' | 'configure' | 'preview'>('upload');
   const [frameImage, setFrameImage] = useState<string | null>(null);
   const [frameDimensions, setFrameDimensions] = useState({ width: 1080, height: 1080 });
@@ -267,7 +271,7 @@ export const DPMakerAdmin: React.FC<DPMakerAdminProps> = ({ onNavigate }) => {
       toast.error('Please upload a frame image');
       return;
     }
-    
+    eventsService.updateModuleCount(eventId, 'DP & Cover Maker', 1, 'DP frame saved', 'image');
     toast.success('DP Frame saved successfully');
   };
   

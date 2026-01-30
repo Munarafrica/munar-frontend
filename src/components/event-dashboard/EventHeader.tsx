@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import imgImagePlaceholder from "figma:asset/65e556ca7e7ea4317a3b52abe7f8c041aeaaf1eb.png";
 import { Page } from '../../App';
+import { setCurrentEventId } from '../../lib/event-storage';
 
 interface EventHeaderProps {
   event: EventData;
@@ -24,13 +25,13 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
             eventName: event.name,
             eventType: event.type,
             domainType: isSubdomain ? 'subdomain' : 'custom',
+            description: event.description || '',
             subdomain,
             customDomain,
-            description: '',
             startDate: event.date,
             startTime: event.time,
-            endDate: '',
-            endTime: '',
+            endDate: event.endDate || '',
+            endTime: event.endTime || '',
             isRecurring: false,
             recurringStartDate: '',
             frequency: '',
@@ -40,21 +41,23 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
             recurringEndType: 'date',
             recurringEndDate: '',
             recurringOccurrences: 1,
-            country: '',
-            venueLocation: '',
-            categories: [],
+            country: event.country || '',
+            venueLocation: event.venueLocation || '',
+            categories: event.categories || [],
             currency: event.currency || 'NGN',
+            coverImageUrl: event.coverImageUrl || '',
         };
 
         window.localStorage.setItem('munar_event_form', JSON.stringify(draft));
+        setCurrentEventId(event.id);
         onNavigate?.('create-event');
     };
   return (
     <div className="w-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 flex flex-col md:flex-row gap-8 shadow-sm transition-colors">
         {/* Cover Image */}
         <div className="w-full md:w-[305px] h-[186px] rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0 relative">
-            <img 
-                src={imgImagePlaceholder} 
+                <img 
+                    src={event.coverImageUrl || imgImagePlaceholder} 
                 alt="Event Cover" 
                 className="w-full h-full object-cover"
             />
@@ -75,13 +78,19 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
                     <span className="text-slate-900 dark:text-slate-100">{event.name}</span>
                 </div>
 
-                {/* Title & Badge */}
-                <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{event.name}</h1>
-                    <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium rounded-md px-2.5 py-0.5 border-0">
-                        {event.status}
-                    </Badge>
-                </div>
+                                {/* Title & Badge */}
+                                <div className="flex items-center gap-3">
+                                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{event.name}</h1>
+                                        <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium rounded-md px-2.5 py-0.5 border-0">
+                                                {event.status}
+                                        </Badge>
+                                </div>
+
+                                {event.description && (
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
+                                        {event.description}
+                                    </p>
+                                )}
 
                 {/* Meta Info */}
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-500 dark:text-slate-400">

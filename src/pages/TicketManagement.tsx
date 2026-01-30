@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TopBar } from "../components/dashboard/TopBar";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { TicketType, Attendee, TicketStatus, Page } from "../components/event-dashboard/types";
@@ -8,6 +8,8 @@ import { TicketQuestionsTab } from "../components/event-dashboard/TicketQuestion
 import { TicketSettingsTab } from "../components/event-dashboard/TicketSettingsTab";
 import { Plus, Users, QrCode, MessageSquare, Settings, Search, Filter, MoreVertical, AlertCircle, Copy, Trash2, Edit, Ticket, ExternalLink, Link as LinkIcon, BarChart3, CreditCard, ChevronLeft } from 'lucide-react';
 import { cn } from "../components/ui/utils";
+import { eventsService, ticketsService } from "../services";
+import { getCurrentEventId } from "../lib/event-storage";
 
 interface TicketManagementProps {
   onNavigate?: (page: Page) => void;
@@ -17,8 +19,8 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
   const [activeTab, setActiveTab] = useState<'types' | 'attendees' | 'validation' | 'questions' | 'settings'>('types');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const eventName = 'Lagos Tech Summit 2026';
+    const eventId = getCurrentEventId();
   
-  // Mock Data
   const [tickets, setTickets] = useState<TicketType[]>([
       {
           id: 't1',
@@ -67,19 +69,39 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
       { id: 'a3', name: 'Acme Corp', email: 'contact@acme.com', ticketTypeId: 't2', ticketTypeName: 'VIP Table', purchaseDate: '2026-01-20', status: 'Confirmed', checkedIn: false },
   ]);
 
+    useEffect(() => {
+        ticketsService.getTickets(eventId).then(setTickets).catch(() => null);
+    }, [eventId]);
+
   const handleCreateTicket = (newTicket: Partial<TicketType>) => {
-      const ticket: TicketType = {
-          id: `t${tickets.length + 1}`,
-          quantitySold: 0,
-          ...newTicket
-      } as TicketType;
-      
-      setTickets([...tickets, ticket]);
+            ticketsService.createTicket(eventId, newTicket as any).then((ticket) => {
+                ticketsService.getTickets(eventId).then((list) => {
+                    setTickets(list);
+                    eventsService.updateModuleCount(
+                        eventId,
+                        'Tickets',
+                        list.length,
+                        `Created ticket "${ticket.name || 'New ticket'}"`,
+                        'ticket'
+                    );
+                });
+            }).catch(() => null);
   };
 
   const handleDeleteTicket = (id: string) => {
       if(window.confirm("Are you sure you want to delete this ticket?")) {
-        setTickets(tickets.filter(t => t.id !== id));
+                ticketsService.deleteTicket(eventId, id).then(() => {
+                    ticketsService.getTickets(eventId).then((list) => {
+                        setTickets(list);
+                        eventsService.updateModuleCount(
+                            eventId,
+                            'Tickets',
+                            list.length,
+                            'Ticket deleted',
+                            'ticket'
+                        );
+                    });
+                }).catch(() => null);
       }
   };
 

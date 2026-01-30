@@ -19,6 +19,7 @@ export interface ChecklistItem {
   status: 'not-started' | 'in-progress' | 'completed';
   actionLabel: string;
   phase: EventPhase;
+  count?: number;
 }
 
 export type ModuleCategory = 'Core' | 'Growth' | 'Operations';
@@ -32,6 +33,7 @@ export interface Module {
   actionLabel: string;
   category?: ModuleCategory;
   iconColor?: string;
+  count?: number;
 }
 
 export type ActivityType = 'ticket' | 'check-in' | 'vote' | 'merch' | 'form' | 'system';
@@ -42,15 +44,24 @@ export interface Activity {
   message: string;
   timestamp: string; // ISO string
   isHighPriority: boolean;
+  module?: string; // module name
+  icon?: string; // optional icon name
 }
 
 export interface EventData {
   id: string;
   name: string;
+  description?: string;
   date: string;
   time: string;
+  endDate?: string;
+  endTime?: string;
   type: 'Physical' | 'Virtual' | 'Hybrid';
   websiteUrl: string;
+  coverImageUrl?: string;
+  country?: string;
+  venueLocation?: string;
+  categories?: string[];
   currency?: 'NGN' | 'GHS' | 'ZAR';
   status: EventStatus;
   phase: EventPhase;
@@ -63,6 +74,7 @@ export type TicketTypeType = 'Single' | 'Group';
 export type TicketVisibility = 'Public' | 'Hidden' | 'Invite Only';
 
 export interface TicketType {
+  eventId?: string;
   id: string;
   name: string;
   type: TicketTypeType;

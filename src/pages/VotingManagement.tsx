@@ -14,7 +14,8 @@ import { VotingSettingsTab } from '../components/voting/VotingSettingsTab';
 import { CampaignDetailView } from '../components/voting/CampaignDetailView';
 import { useCampaigns, useVotingAnalytics } from '../hooks';
 import { VotingProvider, useVoting } from '../contexts';
-import { votingService } from '../services';
+import { votingService, eventsService } from '../services';
+import { getCurrentEventId } from '../lib/event-storage';
 import { 
   VotingCampaign, 
   VotingCategory, 
@@ -46,9 +47,8 @@ interface VotingManagementProps {
   onNavigate: (page: Page) => void;
 }
 
-const MOCK_EVENT_ID = 'evt-1'; // TODO: Get from route/props
-
 const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }) => {
+  const eventId = getCurrentEventId();
   const [activeTab, setActiveTab] = useState<
     'campaigns' | 'analytics' | 'results' | 'settings'
   >('campaigns');
@@ -87,10 +87,10 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
     updateContestant,
     deleteContestant,
   } = useCampaigns({
-    eventId: MOCK_EVENT_ID,
+    eventId,
   });
 
-  const { analytics, isLoading: analyticsLoading } = useVotingAnalytics({ eventId: MOCK_EVENT_ID });
+  const { analytics, isLoading: analyticsLoading } = useVotingAnalytics({ eventId });
   const { settings, updateSettings, isLoading: contextLoading } = useVoting();
 
   // Filtered campaigns
@@ -123,7 +123,16 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
   const handleSaveCampaign = async (campaignData: CreateCampaignRequest) => {
     if (editingCampaign) {
       await updateCampaign(editingCampaign.id, campaignData);
-    } else {
+      const created = await createCampaign(campaignData);
+      if (created) {
+        eventsService.updateModuleCount(
+          eventId,
+          'Voting',
+          campaigns.length + 1,
+          `Created campaign "${created.name}"`,
+          'vote'
+        );
+      }
       await createCampaign(campaignData);
     }
     setShowCampaignModal(false);
@@ -147,6 +156,13 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
     if (editingCategory) {
       await updateCategory(selectedCampaignForCategory, editingCategory.id, categoryData);
     } else {
+      eventsService.recordActivity(eventId, {
+        type: 'system',
+        message: `Added category "${categoryData.name}"`,
+        isHighPriority: false,
+        module: 'Voting',
+        icon: 'vote',
+      });
       await createCategory(selectedCampaignForCategory, categoryData);
     }
     setShowCategoryModal(false);
@@ -173,6 +189,13 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
     if (editingContestant) {
       await updateContestant(selectedCampaignForContestant, editingContestant.id, contestantData);
     } else {
+      eventsService.recordActivity(eventId, {
+        type: 'system',
+        message: `Added contestant "${contestantData.name}"`,
+        isHighPriority: false,
+        module: 'Voting',
+        icon: 'vote',
+      });
       await createContestant(selectedCampaignForContestant, selectedCategoryForContestant, contestantData);
     }
     setShowContestantModal(false);
@@ -193,34 +216,52 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
     setSelectedCampaignId(null);
   };
 
+  const handleDeleteCampaign = async (campaignId: string) => {
+    await deleteCampaign(campaignId);
+    eventsService.updateModuleCount(
+      eventId,
+      'Voting',
+      Math.max(campaigns.length - 1, 0),
+      'Campaign deleted',
+      'vote'
+    );
+  };
+
   const handlePlayPause = async (campaignId: string, isPaused: boolean) => {
-    await votingService.pauseCampaign(MOCK_EVENT_ID, campaignId, isPaused);
+    await votingService.pauseCampaign(eventId, campaignId, isPaused);
     // Refresh campaigns
     window.location.reload(); // TODO: Use proper state refresh
   };
 
   const handlePublishToggle = async (campaignId: string, isPublished: boolean) => {
-    await votingService.publishCampaign(MOCK_EVENT_ID, campaignId, isPublished);
+    await votingService.publishCampaign(eventId, campaignId, isPublished);
     // Refresh campaigns
     window.location.reload(); // TODO: Use proper state refresh
   };
 
   const handleSaveVotePackage = async (campaignId: string, data: CreateVotePackageRequest, packageId?: string) => {
     if (packageId) {
-      await votingService.updateVotePackage(MOCK_EVENT_ID, campaignId, packageId, data);
+      await votingService.updateVotePackage(eventId, campaignId, packageId, data);
     } else {
-      await votingService.createVotePackage(MOCK_EVENT_ID, campaignId, data);
+      eventsService.recordActivity(eventId, {
+        type: 'system',
+        message: `Created vote package "${data.name}"`,
+        isHighPriority: false,
+        module: 'Voting',
+        icon: 'vote',
+      });
+      await votingService.createVotePackage(eventId, campaignId, data);
     }
     window.location.reload(); // TODO: Use proper state refresh
   };
 
   const handleToggleVotePackage = async (campaignId: string, packageId: string, isActive: boolean) => {
-    await votingService.toggleVotePackage(MOCK_EVENT_ID, campaignId, packageId, isActive);
+    await votingService.toggleVotePackage(eventId, campaignId, packageId, isActive);
     window.location.reload(); // TODO: Use proper state refresh
   };
 
   const handleDeleteVotePackage = async (campaignId: string, packageId: string) => {
-    await votingService.deleteVotePackage(MOCK_EVENT_ID, campaignId, packageId);
+    await votingService.deleteVotePackage(eventId, campaignId, packageId);
     window.location.reload(); // TODO: Use proper state refresh
   };
 
@@ -266,7 +307,7 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
                 await updateCampaign(id, data as CreateCampaignRequest);
               }}
               onDeleteCampaign={async (id) => {
-                await deleteCampaign(id);
+                await handleDeleteCampaign(id);
                 handleCloseCampaign();
               }}
               onPlayPause={handlePlayPause}
@@ -503,7 +544,7 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
                         onOpen={() => handleOpenCampaign(campaign)}
                         onEdit={() => handleEditCampaign(campaign)}
                         onDuplicate={() => duplicateCampaign(campaign.id)}
-                        onDelete={() => deleteCampaign(campaign.id)}
+                        onDelete={() => handleDeleteCampaign(campaign.id)}
                         onPublish={() => publishCampaign(campaign.id)}
                         onAddCategory={() => handleAddCategory(campaign.id)}
                         onEditCategory={(category) => handleEditCategory(campaign.id, category)}
@@ -531,7 +572,7 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
             {activeTab === 'results' && (
               <VotingResultsTab
                 campaigns={campaigns}
-                eventId={MOCK_EVENT_ID}
+                eventId={eventId}
               />
             )}
 
@@ -591,7 +632,7 @@ const VotingManagementContent: React.FC<VotingManagementProps> = ({ onNavigate }
 // Wrap with VotingProvider
 export const VotingManagement: React.FC<VotingManagementProps> = (props) => {
   return (
-    <VotingProvider eventId={MOCK_EVENT_ID}>
+    <VotingProvider eventId={getCurrentEventId()}>
       <VotingManagementContent {...props} />
     </VotingProvider>
   );

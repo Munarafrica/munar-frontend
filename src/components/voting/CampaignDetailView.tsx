@@ -1,7 +1,7 @@
 // Campaign Detail View - Full page view for a single campaign
 import React, { useState } from 'react';
 import { VotingCampaign, VotingSettings, CreateVotePackageRequest, VotingCategory, Contestant, CreateCategoryRequest, CreateContestantRequest } from '../../types/voting';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

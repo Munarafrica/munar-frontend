@@ -6,8 +6,9 @@ import { SmartSetupChecklist } from "../components/event-dashboard/SmartSetupChe
 import { ModulesHub } from "../components/event-dashboard/ModulesHub";
 import { ActivityFeed } from "../components/event-dashboard/ActivityFeed";
 import { EventData, EventPhase, Metric, ChecklistItem, Module, Activity } from "../components/event-dashboard/types";
-import { cn } from "../components/ui/utils";
 import { Page } from "../App";
+import { eventsService } from '../services';
+import { getCurrentEventId, setCurrentEventId } from '../lib/event-storage';
 
 interface EventDashboardProps {
   onNavigate?: (page: Page) => void;
@@ -17,95 +18,80 @@ export const EventDashboard: React.FC<EventDashboardProps> = ({ onNavigate }) =>
   // --- MOCK DATA STATE ---
   const [phase, setPhase] = useState<EventPhase>('setup');
   
-  const [event, setEvent] = useState<EventData>(() => {
-    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('munar_event_latest') : null;
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Partial<EventData>;
-        return {
-          id: parsed.id || 'evt-123',
-          name: parsed.name || 'Lagos Tech Summit 2026',
-          date: parsed.date || '2026-06-12',
-          time: parsed.time || '09:00 AM WAT',
-          type: parsed.type || 'Hybrid',
-          websiteUrl: parsed.websiteUrl || 'https://lagostech2026.munar.site',
-          currency: parsed.currency || 'NGN',
-          status: parsed.status || 'draft',
-          phase: parsed.phase || 'setup',
-        };
-      } catch {
-        // fallback below
-      }
-    }
-    return {
-      id: "evt-123",
-      name: "Lagos Tech Summit 2026",
-      date: "2026-06-12",
-      time: "09:00 AM WAT",
-      type: "Hybrid",
-      websiteUrl: "https://lagostech2026.munar.site",
-      currency: 'NGN',
-      status: "draft",
-      phase: "setup"
-    };
-  });
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [eventId, setEventId] = useState(() => getCurrentEventId());
 
   // Keep event phase in sync with demo toggle
   useEffect(() => {
-    setEvent(prev => ({
-      ...prev,
-      phase,
-      status: phase === 'setup' ? 'draft' : phase === 'live' ? 'published' : 'published'
-    }));
+    setEvent(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        phase,
+        status: phase === 'setup' ? 'draft' : phase === 'live' ? 'published' : 'published'
+      };
+    });
   }, [phase]);
 
-  // Analytics Data
-  const metrics: Metric[] = [
-    { id: 'm1', label: 'Tickets Sold/registrations', value: '3/5', context: 'setup' },
-    { id: 'm2', label: 'Website Views', value: '12', context: 'setup' },
-    { id: 'm3', label: 'Voting Activity', value: 'Not Configured', context: 'setup' },
-    { id: 'm4', label: 'Total Revenue', value: '₦4.5M', context: 'setup' },
-    { id: 'm5', label: 'Check-ins', value: '0', context: 'setup' },
-    { id: 'm6', label: 'Survey Responses', value: '0', context: 'setup' },
-  ];
+  useEffect(() => {
+    const current = getCurrentEventId();
+    if (current !== eventId) {
+      setEventId(current);
+    }
+  }, [eventId]);
 
-  // Checklist Data
-  const checklistItems: ChecklistItem[] = [
-    { id: 'c1', label: 'Add tickets or registration', status: 'not-started', actionLabel: 'Set up', phase: 'setup' },
-    { id: 'c2', label: 'Customize event website', status: 'in-progress', actionLabel: 'Customize', phase: 'setup' },
-    { id: 'c3', label: 'Add speakers and schedule', status: 'not-started', actionLabel: 'Set up', phase: 'setup' },
-  ];
+  useEffect(() => {
+    let isMounted = true;
 
-  // Modules Data matching screenshot
-  const modules: Module[] = [
-    { id: 'mod1', name: 'Event Website', description: 'Customize your landing page', icon: 'globe', status: 'active', actionLabel: 'Manage', category: 'Core', iconColor: 'green' },
-    { id: 'mod2', name: 'Tickets', description: 'Create and manage ticket tiers', icon: 'ticket', status: 'not-started', actionLabel: 'Manage', category: 'Core', iconColor: 'orange' },
-    { id: 'mod3', name: 'Schedule & Agenda', description: 'Manage sessions and timeline', icon: 'calendar', status: 'not-started', actionLabel: 'Create', category: 'Core', iconColor: 'pink' },
-    { id: 'mod4', name: 'People & Speakers', description: 'Speaker profiles and Bios', icon: 'mic', status: 'not-started', actionLabel: 'Set up', category: 'Growth', iconColor: 'green' },
-    { id: 'mod5', name: 'Sponsors', description: 'create and manage brand partners', icon: 'users', status: 'not-started', actionLabel: 'Set up', category: 'Growth', iconColor: 'blue' },
-    { id: 'mod6', name: 'Forms and surveys', description: 'Customize your landing page', icon: 'file-text', status: 'active', actionLabel: 'Manage', category: 'Core', iconColor: 'pink' },
-    { id: 'mod7', name: 'Voting', description: 'Setup live polls and awards', icon: 'vote', status: 'not-started', actionLabel: 'Manage', category: 'Growth', iconColor: 'indigo' },
-    { id: 'mod8', name: 'Event Media & Gallery', description: 'Customize your landing page', icon: 'globe', status: 'not-started', actionLabel: 'Manage', category: 'Growth', iconColor: 'purple' },
-    { id: 'mod9', name: 'Merchandise', description: 'Sell items and add-ons', icon: 'shopping-bag', status: 'not-started', actionLabel: 'Manage', category: 'Operations', iconColor: 'gray' },
-    { id: 'mod10', name: 'DP & Cover Maker', description: 'Create branded social images', icon: 'image', status: 'not-started', actionLabel: 'Manage', category: 'Growth', iconColor: 'purple' },
-    { id: 'mod11', name: 'Analytics', description: 'Overview of your event analytics', icon: 'layout', status: 'active', actionLabel: 'View', category: 'Operations', iconColor: 'indigo' },
-  ];
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [eventData, metricsData, checklistData, moduleData, activityData] = await Promise.all([
+          eventsService.getEvent(eventId),
+          eventsService.getEventMetrics(eventId),
+          eventsService.getEventChecklist(eventId),
+          eventsService.getEventModules(eventId),
+          eventsService.getEventActivities(eventId),
+        ]);
 
-  const activities: Activity[] = [
-    { id: 'a1', type: 'ticket', message: 'New VIP Ticket purchased by John Doe', timestamp: new Date().toISOString(), isHighPriority: true },
-    { id: 'a2', type: 'form', message: 'Speaker application received', timestamp: new Date(Date.now() - 3600000).toISOString(), isHighPriority: false },
-    { id: 'a3', type: 'system', message: 'Event website published', timestamp: "2026-01-24T10:00:00", isHighPriority: false },
-    { id: 'a4', type: 'ticket', message: 'Sponsorship proposal sent to Acme Corp', timestamp: new Date(Date.now() - 7200000).toISOString(), isHighPriority: false },
-    { id: 'a5', type: 'form', message: 'Registration form updated', timestamp: new Date(Date.now() - 10800000).toISOString(), isHighPriority: false },
-  ];
+        if (!isMounted) return;
+        setEvent(eventData);
+        setMetrics(metricsData);
+        setChecklistItems(checklistData);
+        setModules(moduleData);
+        setActivities(activityData);
+      } catch {
+        if (eventId !== 'evt-1') {
+          setCurrentEventId('evt-1');
+          setEventId('evt-1');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
 
   // Logic to handle actions
   const handlePublish = () => {
-    setEvent(prev => ({ ...prev, status: 'published' }));
+    if (!event) return;
+    eventsService.updateEvent(event.id, { status: 'published' }).then(setEvent).catch(() => null);
   };
 
   const handleUnpublish = () => {
-    setEvent(prev => ({ ...prev, status: 'unpublished' }));
+    if (!event) return;
+    eventsService.updateEvent(event.id, { status: 'unpublished' }).then(setEvent).catch(() => null);
   };
 
   return (
@@ -113,34 +99,44 @@ export const EventDashboard: React.FC<EventDashboardProps> = ({ onNavigate }) =>
       <TopBar onNavigate={onNavigate} />
       
       <main className="flex-1 max-w-[1440px] mx-auto w-full px-6 py-8 space-y-8">
-        {/* Header */}
-        <section>
-             <EventHeader 
+        {isLoading && (
+          <div className="flex items-center justify-center py-12 text-slate-500 dark:text-slate-400">
+            Loading event...
+          </div>
+        )}
+
+        {!isLoading && event && (
+          <>
+            {/* Header */}
+            <section>
+              <EventHeader 
                 event={event} 
                 onPublish={handlePublish}
                 onNavigate={onNavigate}
-            />
-        </section>
+              />
+            </section>
 
-        {/* Dashboard Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 h-full">
-                <SmartSetupChecklist items={checklistItems} className="h-full" />
-            </div>
-            <div className="lg:col-span-2 h-full">
-              <OverviewAnalytics metrics={metrics} phase={phase} onNavigate={onNavigate} />
-            </div>
-        </section>
+            {/* Dashboard Grid */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1 h-full">
+                <SmartSetupChecklist items={checklistItems} className="h-full" onNavigate={onNavigate} />
+              </div>
+              <div className="lg:col-span-2 h-full">
+                <OverviewAnalytics metrics={metrics} phase={phase} onNavigate={onNavigate} />
+              </div>
+            </section>
 
-        {/* Modules */}
-        <section>
-            <ModulesHub modules={modules} onNavigate={onNavigate} />
-        </section>
+            {/* Modules */}
+            <section>
+              <ModulesHub modules={modules} onNavigate={onNavigate} />
+            </section>
 
-        {/* Activity */}
-        <section>
-            <ActivityFeed activities={activities} />
-        </section>
+            {/* Activity */}
+            <section>
+              <ActivityFeed activities={activities} />
+            </section>
+          </>
+        )}
       </main>
     </div>
   );

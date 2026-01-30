@@ -6,6 +6,8 @@ import { Plus, FileText, BarChart2, MoreVertical, Edit2, Trash2, Eye, Copy, Chev
 import { cn } from "../components/ui/utils";
 import { FormBuilder } from "../components/event-dashboard/forms/FormBuilder";
 import { FormResponseViewer } from "../components/event-dashboard/forms/FormResponseViewer";
+import { eventsService, formsService } from "../services";
+import { getCurrentEventId } from "../lib/event-storage";
 
 interface FormManagementProps {
   onNavigate?: (page: Page) => void;
@@ -13,6 +15,7 @@ interface FormManagementProps {
 
 export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) => {
   const [view, setView] = useState<'list' | 'builder' | 'responses'>('list');
+  const eventId = getCurrentEventId();
   const [forms, setForms] = useState<Form[]>([
     {
       id: 'f1',
@@ -95,9 +98,18 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
     setView('builder');
   };
 
-  const handleDeleteForm = (id: string) => {
+  const handleDeleteForm = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this form?")) {
-      setForms(forms.filter(f => f.id !== id));
+      await formsService.deleteForm(eventId, id);
+      const list = await formsService.getForms(eventId).catch(() => []);
+      setForms(list);
+      eventsService.updateModuleCount(
+        eventId,
+        'Forms and surveys',
+        list.length,
+        'Form deleted',
+        'file-text'
+      );
     }
   };
 
@@ -106,11 +118,28 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
     setView('responses');
   };
 
-  const handleSaveForm = (savedForm: Form) => {
-    if (forms.some(f => f.id === savedForm.id)) {
-      setForms(forms.map(f => f.id === savedForm.id ? { ...savedForm, updatedAt: new Date().toISOString() } : f));
+  const handleSaveForm = async (savedForm: Form) => {
+    const isExisting = forms.some(f => f.id === savedForm.id);
+    if (isExisting) {
+      const updated = await formsService.updateForm(eventId, savedForm.id, savedForm);
+      setForms(forms.map(f => f.id === savedForm.id ? updated : f));
     } else {
-      setForms([...forms, { ...savedForm, updatedAt: new Date().toISOString() }]);
+      const created = await formsService.createForm(eventId, {
+        title: savedForm.title,
+        description: savedForm.description,
+        type: savedForm.type,
+        fields: savedForm.fields,
+        settings: savedForm.settings,
+      });
+      const list = await formsService.getForms(eventId).catch(() => []);
+      setForms(list.length ? list : [...forms, created]);
+      eventsService.updateModuleCount(
+        eventId,
+        'Forms and surveys',
+        (list.length ? list.length : forms.length + 1),
+        `Created form "${created.title || 'New form'}"`,
+        'file-text'
+      );
     }
     setView('list');
     setCurrentForm(undefined);

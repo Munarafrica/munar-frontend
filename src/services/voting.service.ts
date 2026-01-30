@@ -113,6 +113,8 @@ export async function createCampaign(eventId: string, data: CreateCampaignReques
       publicUrl: `/vote/${campaignId}`,
       captchaEnabled: data.captchaEnabled ?? false,
       voteTimeout: data.voteTimeout ?? 30,
+      isPublished: false,
+      isPaused: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdBy: 'user-1',

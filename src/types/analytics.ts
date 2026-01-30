@@ -1,6 +1,7 @@
 export type DateRangePreset = '7d' | '30d' | '90d' | 'custom';
 
 export interface AnalyticsFilters {
+  [key: string]: string | number | boolean | undefined;
   dateRange: DateRangePreset;
   startDate?: string;
   endDate?: string;

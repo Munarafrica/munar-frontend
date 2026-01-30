@@ -17,7 +17,7 @@ class TicketsService {
   async getTickets(eventId: string, params?: SearchParams): Promise<TicketType[]> {
     if (config.features.useMockData) {
       await delay(400);
-      return mockTickets;
+      return mockTickets.filter(t => t.eventId === eventId);
     }
 
     const response = await apiClient.get<ApiResponse<TicketType[]>>(`/events/${eventId}/tickets`, { params: params as Record<string, string | number | boolean | undefined> });
@@ -43,6 +43,7 @@ class TicketsService {
       await delay(600);
       
       const newTicket: TicketType = {
+        eventId,
         id: generateId('t'),
         name: data.name,
         type: data.type,

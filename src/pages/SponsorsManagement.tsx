@@ -12,12 +12,13 @@ import { SponsorsSection } from '../components/public/SponsorsSection';
 import { useSponsors } from '../hooks';
 import { Sponsor } from '../types/sponsors';
 import { Plus, Search, Link as LinkIcon, ExternalLink, Copy, Filter, Loader2, ChevronLeft } from 'lucide-react';
+import { eventsService } from '../services';
+import { getCurrentEventId } from '../lib/event-storage';
 
 interface SponsorsManagementProps {
   onNavigate: (page: Page) => void;
 }
 
-const MOCK_EVENT_ID = 'evt-1';
 const MOCK_EVENT_NAME = 'Lagos Tech Summit 2026';
 
 const slugify = (value: string) =>
@@ -28,8 +29,9 @@ const slugify = (value: string) =>
     .replace(/(^-|-$)+/g, '') || 'event';
 
 export const SponsorsManagement: React.FC<SponsorsManagementProps> = ({ onNavigate }) => {
+  const eventId = getCurrentEventId();
   const { sponsors, isLoading, addSponsor, editSponsor, removeSponsor, reorderSponsor, toggleVisibility } = useSponsors({
-    eventId: MOCK_EVENT_ID,
+    eventId,
   });
 
   const [search, setSearch] = useState('');
@@ -70,6 +72,13 @@ export const SponsorsManagement: React.FC<SponsorsManagementProps> = ({ onNaviga
       await editSponsor(editingSponsor.id, payload);
     } else {
       await addSponsor(payload);
+      eventsService.updateModuleCount(
+        eventId,
+        'Sponsors',
+        sponsors.length + 1,
+        `Added sponsor "${payload.name}"`,
+        'users'
+      );
     }
     setEditingSponsor(null);
   };
@@ -78,6 +87,13 @@ export const SponsorsManagement: React.FC<SponsorsManagementProps> = ({ onNaviga
     const confirmed = window.confirm(`Delete ${sponsor.name}?`);
     if (!confirmed) return;
     await removeSponsor(sponsor.id);
+    eventsService.updateModuleCount(
+      eventId,
+      'Sponsors',
+      Math.max(sponsors.length - 1, 0),
+      'Sponsor removed',
+      'users'
+    );
   };
 
   const copyLink = async (url: string) => {

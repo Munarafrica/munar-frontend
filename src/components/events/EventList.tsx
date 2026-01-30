@@ -77,12 +77,21 @@ const EventRow = ({ event, onEdit, onView, onClone, onDelete }: EventRowProps) =
 
   return (
     <div 
+      onClick={() => onView?.(event.id)}
       className="grid grid-cols-12 gap-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[12px] px-6 py-4 items-center hover:shadow-sm dark:hover:shadow-slate-800/50 transition-shadow cursor-pointer group relative z-0"
     >
       {/* Event Name + Image */}
       <div className="col-span-8 md:col-span-4 flex items-center gap-4">
-        <div className="size-12 rounded-[8px] bg-[#e5e5e5] dark:bg-slate-800 shrink-0 flex items-center justify-center text-slate-300 dark:text-slate-600">
-          <OrganizationIcon className="size-6" />
+        <div className="size-12 rounded-[8px] bg-[#e5e5e5] dark:bg-slate-800 shrink-0 flex items-center justify-center text-slate-300 dark:text-slate-600 overflow-hidden">
+          {event.coverImageUrl ? (
+            <img
+              src={event.coverImageUrl}
+              alt={`${event.name} cover`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <OrganizationIcon className="size-6" />
+          )}
         </div>
         <div>
           <h3 className="text-[14px] font-bold text-[#262626] dark:text-slate-100 font-['Raleway'] group-hover:text-[#8b5cf6] dark:group-hover:text-[#a78bfa] transition-colors">{event.name}</h3>

@@ -30,15 +30,16 @@ import {
   Copy,
   ChevronLeft,
 } from 'lucide-react';
+import { eventsService } from '../services';
+import { getCurrentEventId } from '../lib/event-storage';
 
 interface MerchandiseManagementProps {
   onNavigate: (page: Page) => void;
 }
 
-const MOCK_EVENT_ID = 'evt-1'; // TODO: Get from route/props
-
 const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'analytics' | 'settings'>('products');
+  const eventId = getCurrentEventId();
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
   
@@ -63,7 +64,7 @@ const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ on
     publishProduct,
     archiveProduct,
   } = useProducts({
-    eventId: MOCK_EVENT_ID,
+    eventId,
   });
 
   const {
@@ -75,8 +76,12 @@ const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ on
     refundOrder,
     exportOrders,
   } = useOrders({
-    eventId: MOCK_EVENT_ID,
+    eventId,
   });
+
+  const updateMerchCount = (count: number, message?: string) => {
+    eventsService.updateModuleCount(eventId, 'Merchandise', count, message, 'shopping-bag');
+  };
 
   const { analytics, settings, isLoading: contextLoading, updateSettings } = useMerchandise();
 
@@ -109,7 +114,24 @@ const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ on
     if (editingProduct) {
       await updateProduct(editingProduct.id, productData);
     } else {
-      await createProduct(productData);
+      const created = await createProduct(productData);
+      if (created) {
+        updateMerchCount(products.length + 1, `Created product "${created.name}"`);
+      }
+    }
+  };
+
+  const handleDuplicateProduct = async (productId: string) => {
+    const duplicated = await duplicateProduct(productId);
+    if (duplicated) {
+      updateMerchCount(products.length + 1, `Duplicated product "${duplicated.name}"`);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    const deleted = await deleteProduct(productId);
+    if (deleted) {
+      updateMerchCount(Math.max(products.length - 1, 0), 'Product deleted');
     }
   };
   
@@ -366,8 +388,8 @@ const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ on
                         key={product.id}
                         product={product}
                         onEdit={() => handleEditProduct(product)}
-                        onDuplicate={() => duplicateProduct(product.id)}
-                        onDelete={() => deleteProduct(product.id)}
+                        onDuplicate={() => handleDuplicateProduct(product.id)}
+                        onDelete={() => handleDeleteProduct(product.id)}
                         onPublish={() => publishProduct(product.id)}
                         onArchive={() => archiveProduct(product.id)}
                       />
@@ -536,8 +558,9 @@ const MerchandiseManagementContent: React.FC<MerchandiseManagementProps> = ({ on
 
 // Wrap with MerchandiseProvider
 export const MerchandiseManagement: React.FC<MerchandiseManagementProps> = (props) => {
+  const eventId = getCurrentEventId();
   return (
-    <MerchandiseProvider eventId={MOCK_EVENT_ID}>
+    <MerchandiseProvider eventId={eventId}>
       <MerchandiseManagementContent {...props} />
     </MerchandiseProvider>
   );

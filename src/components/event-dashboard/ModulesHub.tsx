@@ -28,6 +28,34 @@ const ModuleIcon = ({ name, className }: { name: string, className?: string }) =
 };
 
 export const ModulesHub: React.FC<ModulesHubProps> = ({ modules, onNavigate }) => {
+  const getCountLabel = (module: Module) => {
+    const count = module.count ?? 0;
+    if (count <= 0) return null;
+    const plural = (label: string) => `${count} ${label}${count === 1 ? '' : 's'}`;
+    switch (module.name) {
+      case 'Tickets':
+        return plural('ticket');
+      case 'Forms and surveys':
+        return plural('form');
+      case 'Merchandise':
+        return plural('product');
+      case 'Voting':
+        return plural('campaign');
+      case 'Sponsors':
+        return plural('sponsor');
+      case 'Schedule & Agenda':
+        return plural('session');
+      case 'People & Speakers':
+        return plural('speaker');
+      case 'Event Media & Gallery':
+        return plural('item');
+      case 'DP & Cover Maker':
+        return plural('frame');
+      default:
+        return plural('item');
+    }
+  };
+
   const handleModuleClick = (moduleName: string) => {
     if (moduleName === 'Tickets') {
         onNavigate?.('ticket-management');
@@ -59,7 +87,7 @@ export const ModulesHub: React.FC<ModulesHubProps> = ({ modules, onNavigate }) =
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {modules.map((module) => {
-            const isActive = module.status === 'active';
+            const countLabel = getCountLabel(module);
             
             // Map color names to tailwind classes
             const colorMap: Record<string, string> = {
@@ -85,15 +113,14 @@ export const ModulesHub: React.FC<ModulesHubProps> = ({ modules, onNavigate }) =
                             <ModuleIcon name={module.icon} className="w-5 h-5" />
                         </div>
                         
-                        {isActive ? (
-                             <Badge variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-[10px] font-medium border-0 px-2 flex items-center gap-1.5 h-6">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                Active
-                             </Badge>
+                        {countLabel ? (
+                          <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 text-[10px] font-medium border-0 px-2 h-6">
+                            {countLabel}
+                          </Badge>
                         ) : (
-                             <Badge variant="secondary" className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 text-[10px] font-medium border-0 px-2 h-6">
-                                Not Started
-                             </Badge>
+                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 text-[10px] font-medium border-0 px-2 h-6">
+                            Not Started
+                          </Badge>
                         )}
                     </div>
 

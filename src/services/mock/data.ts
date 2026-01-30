@@ -64,6 +64,7 @@ export const mockEvents: EventData[] = [
 // Mock Tickets
 export const mockTickets: TicketType[] = [
   {
+    eventId: 'evt-1',
     id: 't1',
     name: 'Early Bird',
     type: 'Single',
@@ -83,6 +84,7 @@ export const mockTickets: TicketType[] = [
     requireAttendeeInfo: true,
   },
   {
+    eventId: 'evt-1',
     id: 't2',
     name: 'VIP Table',
     type: 'Group',
@@ -103,6 +105,7 @@ export const mockTickets: TicketType[] = [
     requireAttendeeInfo: true,
   },
   {
+    eventId: 'evt-1',
     id: 't3',
     name: 'Regular',
     type: 'Single',

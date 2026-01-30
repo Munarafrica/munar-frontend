@@ -6,6 +6,8 @@ import { Users, Calendar, ChevronLeft } from 'lucide-react';
 import { cn } from "../components/ui/utils";
 import { SpeakersTab } from "../components/event-dashboard/program/SpeakersTab";
 import { ScheduleTab } from "../components/event-dashboard/program/ScheduleTab";
+import { eventsService, programService } from "../services";
+import { getCurrentEventId } from "../lib/event-storage";
 
 interface ProgramManagementProps {
   onNavigate?: (page: Page) => void;
@@ -13,6 +15,7 @@ interface ProgramManagementProps {
 
 export const ProgramManagement: React.FC<ProgramManagementProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'speakers' | 'schedule'>('speakers');
+  const eventId = getCurrentEventId();
 
   // Mock Data - Speakers
   const [speakers, setSpeakers] = useState<Speaker[]>([
@@ -79,7 +82,7 @@ export const ProgramManagement: React.FC<ProgramManagementProps> = ({ onNavigate
   ]);
 
   // --- Speaker Actions ---
-  const handleAddSpeaker = (newSpeaker: Partial<Speaker>) => {
+  const handleAddSpeaker = async (newSpeaker: Partial<Speaker>) => {
     const speaker: Speaker = {
       id: `s${Date.now()}`,
       categories: [],
@@ -89,16 +92,35 @@ export const ProgramManagement: React.FC<ProgramManagementProps> = ({ onNavigate
       bio: '',
       ...newSpeaker
     };
-    setSpeakers([...speakers, speaker]);
+    const created = await programService.createSpeaker(eventId, speaker);
+    setSpeakers([...speakers, created]);
+    const list = await programService.getSpeakers(eventId).catch(() => []);
+    eventsService.updateModuleCount(
+      eventId,
+      'People & Speakers',
+      list.length,
+      `Added speaker "${created.name || 'New speaker'}"`,
+      'mic'
+    );
   };
 
-  const handleEditSpeaker = (updatedSpeaker: Speaker) => {
-    setSpeakers(speakers.map(s => s.id === updatedSpeaker.id ? updatedSpeaker : s));
+  const handleEditSpeaker = async (updatedSpeaker: Speaker) => {
+    const updated = await programService.updateSpeaker(eventId, updatedSpeaker.id, updatedSpeaker);
+    setSpeakers(speakers.map(s => s.id === updated.id ? updated : s));
   };
 
-  const handleDeleteSpeaker = (id: string) => {
+  const handleDeleteSpeaker = async (id: string) => {
     if (window.confirm("Are you sure? This will remove them from any assigned sessions.")) {
-      setSpeakers(speakers.filter(s => s.id !== id));
+      await programService.deleteSpeaker(eventId, id);
+      const list = await programService.getSpeakers(eventId).catch(() => []);
+      setSpeakers(list);
+      eventsService.updateModuleCount(
+        eventId,
+        'People & Speakers',
+        list.length,
+        'Speaker removed',
+        'mic'
+      );
       // Optional: Cleanup session assignments
       setSessions(sessions.map(sess => ({
           ...sess,
@@ -108,7 +130,7 @@ export const ProgramManagement: React.FC<ProgramManagementProps> = ({ onNavigate
   };
 
   // --- Session Actions ---
-  const handleAddSession = (newSession: Partial<Session>) => {
+  const handleAddSession = async (newSession: Partial<Session>) => {
     const session: Session = {
         id: `sess${Date.now()}`,
         title: '',
@@ -119,16 +141,35 @@ export const ProgramManagement: React.FC<ProgramManagementProps> = ({ onNavigate
         speakerIds: [],
         ...newSession
     };
-    setSessions([...sessions, session]);
+    const created = await programService.createSession(eventId, session);
+    setSessions([...sessions, created]);
+    const list = await programService.getSessions(eventId).catch(() => []);
+    eventsService.updateModuleCount(
+      eventId,
+      'Schedule & Agenda',
+      list.length,
+      `Added session "${created.title || 'New session'}"`,
+      'calendar'
+    );
   };
 
-  const handleEditSession = (updatedSession: Session) => {
-      setSessions(sessions.map(s => s.id === updatedSession.id ? updatedSession : s));
-  };
+    const handleEditSession = async (updatedSession: Session) => {
+      const updated = await programService.updateSession(eventId, updatedSession.id, updatedSession);
+      setSessions(sessions.map(s => s.id === updated.id ? updated : s));
+    };
 
-  const handleDeleteSession = (id: string) => {
+  const handleDeleteSession = async (id: string) => {
       if (window.confirm("Delete this session?")) {
-          setSessions(sessions.filter(s => s.id !== id));
+          await programService.deleteSession(eventId, id);
+          const list = await programService.getSessions(eventId).catch(() => []);
+          setSessions(list);
+          eventsService.updateModuleCount(
+            eventId,
+            'Schedule & Agenda',
+            list.length,
+            'Session removed',
+            'calendar'
+          );
       }
   };
 

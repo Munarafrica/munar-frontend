@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { TopBar } from '../components/dashboard/TopBar';
 import { Page } from '../App';
 import { Button } from '../components/ui/button';
@@ -13,6 +13,8 @@ import {
   CheckCircle, PlayCircle, HardDrive, Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { eventsService } from '../services';
+import { getCurrentEventId } from '../lib/event-storage';
 
 interface GalleryAdminProps {
   onNavigate?: (page: Page) => void;
@@ -84,6 +86,10 @@ const MOCK_MEDIA: MediaItem[] = [
 
 export const GalleryAdmin: React.FC<GalleryAdminProps> = ({ onNavigate }) => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>(MOCK_MEDIA);
+  const eventId = getCurrentEventId();
+  const updateGalleryCount = (count: number, message?: string) => {
+    eventsService.updateModuleCount(eventId, 'Event Media & Gallery', count, message, 'image');
+  };
   const [filter, setFilter] = useState<'all' | 'image' | 'video' | 'featured' | 'hidden'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploading, setIsUploading] = useState(false);
@@ -128,6 +134,7 @@ export const GalleryAdmin: React.FC<GalleryAdminProps> = ({ onNavigate }) => {
       }));
 
       setMediaItems(prev => [...newItems, ...prev]);
+      updateGalleryCount(mediaItems.length + newItems.length, `Uploaded ${newItems.length} media item${newItems.length === 1 ? '' : 's'}`);
       setIsUploading(false);
       toast.success(`Successfully uploaded ${files.length} items`);
     }, 1500);
@@ -150,6 +157,7 @@ export const GalleryAdmin: React.FC<GalleryAdminProps> = ({ onNavigate }) => {
   const deleteMedia = (id: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       setMediaItems(prev => prev.filter(item => item.id !== id));
+      updateGalleryCount(Math.max(mediaItems.length - 1, 0), 'Media item deleted');
       toast.success('Media deleted');
     }
   };

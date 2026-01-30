@@ -17,19 +17,20 @@ import { AlertsPrivacyTab } from '../components/event-dashboard/analytics/Alerts
 import { ComparisonTab } from '../components/event-dashboard/analytics/ComparisonTab';
 import { cn } from '../components/ui/utils';
 import { Button } from '../components/ui/Button';
+import { getCurrentEventId } from '../lib/event-storage';
 
 interface EventAnalyticsProps {
   onNavigate: (page: Page) => void;
 }
 
-const MOCK_EVENT_ID = 'evt-1';
-
 export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ onNavigate }) => {
+  const eventId = getCurrentEventId();
   const [activeTab, setActiveTab] = useState('overview');
   const { analytics, isLoading, error, filters, setFilters, exportReport, scheduleReport } = useEventAnalytics({
-    eventId: MOCK_EVENT_ID,
+    eventId,
     initialRange: '7d',
   });
+
 
   const currency = analytics?.currency || 'NGN';
 
