@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Moon, Sun, Laptop } from "lucide-react"
-import { Button } from "./Button"
+import { Button } from "./button"
 import { useTheme } from "../theme-provider"
 import { cn } from "./utils"
 
