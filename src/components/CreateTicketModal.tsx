@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Info, Users, Ticket, DollarSign, Calendar, Eye } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Info, Users, Ticket, DollarSign, Calendar, Eye, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from './ui/utils';
-import { TicketType, TicketStatus, TicketTypeType, TicketVisibility } from './event-dashboard/types';
+import { TicketType, TicketStatus, TicketTypeType, TicketVisibility, Perk } from './event-dashboard/types';
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -13,14 +13,20 @@ interface CreateTicketModalProps {
 export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, onClose, onSave }) => {
   const [activeSection, setActiveSection] = useState<'basic' | 'advanced'>('basic');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [perkInput, setPerkInput] = useState('');
+  const [editingPerkId, setEditingPerkId] = useState<string | null>(null);
+  const [editingPerkName, setEditingPerkName] = useState('');
+  const [showPerkTooltip, setShowPerkTooltip] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<Partial<TicketType>>({
     type: 'Single',
     name: '',
+    description: '',
     isFree: false,
     price: 0,
     quantityTotal: 100,
+    quantityUnlimited: false,
     minPerOrder: 1,
     maxPerOrder: 10,
     salesStart: '',
@@ -29,15 +35,47 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
     status: 'Draft',
     allowTransfer: true,
     allowResale: true,
+    transferFeesToGuest: false,
     refundPolicy: 'Refundable',
     requireAttendeeInfo: true,
-    groupSize: 1
+    groupSize: 1,
+    perks: []
   });
 
   if (!isOpen) return null;
 
   const handleInputChange = (field: keyof TicketType, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addPerk = () => {
+    if (perkInput.trim()) {
+      const newPerk: Perk = {
+        id: Date.now().toString(),
+        name: perkInput.trim()
+      };
+      setFormData(prev => ({
+        ...prev,
+        perks: [...(prev.perks || []), newPerk]
+      }));
+      setPerkInput('');
+    }
+  };
+
+  const updatePerk = (id: string, newName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      perks: (prev.perks || []).map(p => p.id === id ? { ...p, name: newName } : p)
+    }));
+    setEditingPerkId(null);
+    setEditingPerkName('');
+  };
+
+  const removePerk = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      perks: (prev.perks || []).filter(p => p.id !== id)
+    }));
   };
 
   const handleSave = () => {
@@ -135,6 +173,93 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
                 )}
              </div>
 
+             {/* Ticket Description */}
+             <div className="space-y-1.5">
+                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ticket Description</label>
+                 <textarea 
+                     placeholder="Add details about what's included in this ticket..."
+                     value={formData.description || ''}
+                     onChange={(e) => handleInputChange('description', e.target.value)}
+                     className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 resize-none"
+                     rows={3}
+                 />
+             </div>
+
+             {/* Perks */}
+             <div className="space-y-2">
+                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Ticket Perks</label>
+                 <div className="flex gap-2">
+                     <input 
+                         type="text" 
+                         placeholder="e.g. Free lunch, VIP parking"
+                         value={perkInput}
+                         onChange={(e) => setPerkInput(e.target.value)}
+                         onKeyPress={(e) => e.key === 'Enter' && addPerk()}
+                         className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                     />
+                     <button 
+                         onClick={addPerk}
+                         className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-1 transition-colors"
+                     >
+                         <Plus className="w-4 h-4" />
+                         Add
+                     </button>
+                 </div>
+                 
+                 {/* Perks List */}
+                 {(formData.perks || []).length > 0 && (
+                     <div className="space-y-2 mt-3">
+                         {formData.perks.map((perk) => (
+                             <div 
+                                 key={perk.id}
+                                 className="flex items-center gap-2 p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"
+                             >
+                                 {editingPerkId === perk.id ? (
+                                     <>
+                                         <input 
+                                             type="text" 
+                                             value={editingPerkName}
+                                             onChange={(e) => setEditingPerkName(e.target.value)}
+                                             className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+                                             onKeyPress={(e) => e.key === 'Enter' && updatePerk(perk.id, editingPerkName)}
+                                             autoFocus
+                                         />
+                                         <button 
+                                             onClick={() => updatePerk(perk.id, editingPerkName)}
+                                             className="text-indigo-600 hover:text-indigo-700 text-xs font-semibold"
+                                         >
+                                             Save
+                                         </button>
+                                     </>
+                                 ) : (
+                                     <>
+                                         <span className="flex-1 text-sm text-slate-900 dark:text-slate-100">{perk.name}</span>
+                                         <button 
+                                             onClick={() => {
+                                                 setEditingPerkId(perk.id);
+                                                 setEditingPerkName(perk.name);
+                                             }}
+                                             className="p-1 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                                             title="Edit perk"
+                                         >
+                                             <Edit2 className="w-3.5 h-3.5" />
+                                         </button>
+                                         <button 
+                                             onClick={() => removePerk(perk.id)}
+                                             className="p-1 text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
+                                             title="Remove perk"
+                                         >
+                                             <Trash2 className="w-3.5 h-3.5" />
+                                         </button>
+                                     </>
+                                 )}
+                             </div>
+                         ))}
+                     </div>
+                 )}
+
+             </div>
+
              {/* Pricing */}
              <div className="space-y-3">
                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Pricing</label>
@@ -180,16 +305,38 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
              </div>
 
              {/* Quantity & Limits */}
-             <div className="grid grid-cols-3 gap-4 pt-2">
-                 <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Quantity</label>
-                    <input 
-                        type="number" 
-                        value={formData.quantityTotal}
-                        onChange={(e) => handleInputChange('quantityTotal', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
-                    />
+             <div className="space-y-3">
+                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Total Quantity</label>
+                 <div className="flex gap-3 items-end">
+                     <div className="flex-1">
+                         <input 
+                             type="number" 
+                             value={formData.quantityTotal}
+                             onChange={(e) => handleInputChange('quantityTotal', parseInt(e.target.value))}
+                             disabled={formData.quantityUnlimited}
+                             className={cn(
+                                 "w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-800",
+                                 formData.quantityUnlimited && "opacity-50 cursor-not-allowed"
+                             )}
+                         />
+                     </div>
+                     <label className="flex items-center gap-2 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                         <input 
+                             type="checkbox" 
+                             checked={formData.quantityUnlimited || false}
+                             onChange={(e) => {
+                                 handleInputChange('quantityUnlimited', e.target.checked);
+                                 if (e.target.checked) handleInputChange('quantityTotal', 999999);
+                             }}
+                             className="accent-indigo-600 w-4 h-4"
+                         />
+                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Unlimited</span>
+                     </label>
                  </div>
+             </div>
+
+             {/* Min & Max per Order */}
+             <div className="grid grid-cols-2 gap-4">
                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Min per Order</label>
                     <input 
@@ -294,6 +441,32 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
                                     type="checkbox" 
                                     checked={formData.allowResale}
                                     onChange={(e) => handleInputChange('allowResale', e.target.checked)}
+                                    className="accent-indigo-600 w-4 h-4"
+                                />
+                            </label>
+                            <label className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-800 rounded-lg group relative">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Transfer Platform Fees to Guest</span>
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPerkTooltip(!showPerkTooltip)}
+                                            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                        >
+                                            <Info className="w-4 h-4" />
+                                        </button>
+                                        {showPerkTooltip && (
+                                            <div className="absolute bottom-full left-0 mb-2 p-3 bg-slate-900 dark:bg-slate-950 text-white dark:text-slate-100 text-xs rounded-lg shadow-lg z-10 whitespace-normal w-52">
+                                                <p>When enabled, the platform processing fees will be added to the ticket price and charged to customers during checkout instead of being deducted from your revenue.</p>
+                                                <div className="absolute top-full left-3 w-2 h-2 bg-slate-900 dark:bg-slate-950 transform rotate-45"></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <input 
+                                    type="checkbox" 
+                                    checked={formData.transferFeesToGuest || false}
+                                    onChange={(e) => handleInputChange('transferFeesToGuest', e.target.checked)}
                                     className="accent-indigo-600 w-4 h-4"
                                 />
                             </label>

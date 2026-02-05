@@ -73,6 +73,11 @@ export type TicketStatus = 'Draft' | 'On Sale' | 'Sold Out' | 'Hidden';
 export type TicketTypeType = 'Single' | 'Group';
 export type TicketVisibility = 'Public' | 'Hidden' | 'Invite Only';
 
+export interface Perk {
+  id: string;
+  name: string;
+}
+
 export interface TicketType {
   eventId?: string;
   id: string;
@@ -83,6 +88,7 @@ export interface TicketType {
   price?: number;
   quantitySold: number;
   quantityTotal: number;
+  quantityUnlimited?: boolean;
   status: TicketStatus;
   salesStart: string; // ISO string
   salesEnd: string; // ISO string
@@ -90,9 +96,11 @@ export interface TicketType {
   maxPerOrder: number;
   visibility: TicketVisibility;
   description?: string;
+  perks?: Perk[];
   // Advanced options
   allowTransfer: boolean;
   allowResale: boolean;
+  transferFeesToGuest?: boolean;
   refundPolicy: 'Refundable' | 'Non-refundable';
   requireAttendeeInfo: boolean;
 }
