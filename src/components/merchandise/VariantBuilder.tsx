@@ -1,8 +1,8 @@
 // Variant Builder Component for Products
 import React, { useState, useEffect } from 'react';
 import { ProductVariant, VariantOption } from '../../types/merchandise';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import { Plus, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 

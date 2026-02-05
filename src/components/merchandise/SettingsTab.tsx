@@ -1,8 +1,8 @@
 // Settings Tab for Merchandise
 import React, { useState, useEffect } from 'react';
 import { MerchandiseSettings } from '../../types/merchandise';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import {
   Settings,

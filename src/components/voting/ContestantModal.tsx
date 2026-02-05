@@ -1,8 +1,8 @@
 // Contestant Modal - Create/Edit contestants
 import React, { useState, useEffect } from 'react';
 import { Contestant, CreateContestantRequest } from '../../types/voting';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { ImageUploader } from '../ui/ImageUploader';
 import { X, User, Check } from 'lucide-react';
 

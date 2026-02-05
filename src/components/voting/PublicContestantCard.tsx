@@ -1,7 +1,7 @@
 // Public Contestant Card - Display a contestant for public voting
 import React from 'react';
 import { Contestant } from '../../types/voting';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Vote, TrendingUp, Heart, Share2 } from 'lucide-react';
 import { cn } from '../ui/utils';
 

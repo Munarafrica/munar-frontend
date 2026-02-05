@@ -8,8 +8,8 @@ import {
   VoteLimits,
   TransparencyConfig,
 } from '../../types/voting';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { cn } from '../ui/utils';
 import {
   X,

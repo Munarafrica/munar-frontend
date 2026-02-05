@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { VotingCampaign, ContestantResult } from '../../types/voting';
 import { votingService } from '../../services';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

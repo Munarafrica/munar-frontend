@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Input } from '../ui/Input';
+import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Switch } from '../ui/switch';
 import { ImageUploader } from '../ui/ImageUploader';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Sponsor, CreateSponsorRequest } from '../../types/sponsors';
 
 interface SponsorModalProps {

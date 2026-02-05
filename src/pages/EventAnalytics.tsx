@@ -16,7 +16,7 @@ import { ReportsTab } from '../components/event-dashboard/analytics/ReportsTab';
 import { AlertsPrivacyTab } from '../components/event-dashboard/analytics/AlertsPrivacyTab';
 import { ComparisonTab } from '../components/event-dashboard/analytics/ComparisonTab';
 import { cn } from '../components/ui/utils';
-import { Button } from '../components/ui/Button';
+import { Button } from '../components/ui/button';
 import { getCurrentEventId } from '../lib/event-storage';
 
 interface EventAnalyticsProps {

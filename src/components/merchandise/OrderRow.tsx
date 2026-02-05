@@ -2,7 +2,7 @@
 import React from 'react';
 import { Order } from '../../types/merchandise';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -1,9 +1,9 @@
 import React from "react";
 import { AuthLayout } from "../components/auth/AuthLayout";
 import { AuthCard } from "../components/auth/AuthCard";
-import { Input } from "../components/ui/Input";
+import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/AuthButton";
-import { Divider } from "../components/ui/Divider";
+import { Divider } from "../components/ui/divider";
 
 interface LoginProps {
   onNavigate: (page: string) => void;

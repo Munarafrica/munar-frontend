@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { Page } from '../App';
 import { TopBar } from '../components/dashboard/TopBar';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { CampaignCard } from '../components/voting/CampaignCard';
 import { CampaignModal } from '../components/voting/CampaignModal';
 import { CategoryModal } from '../components/voting/CategoryModal';

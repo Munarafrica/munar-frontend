@@ -1,7 +1,7 @@
 // Vote Package Purchase Modal - Buy vote bundles
 import React, { useState } from 'react';
 import { VotePackage } from '../../types/voting';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

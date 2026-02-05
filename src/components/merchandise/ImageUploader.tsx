@@ -1,7 +1,7 @@
 // Image Uploader Component for Products
 import React, { useState, useRef } from 'react';
 import { ProductImage } from '../../types/merchandise';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import { Upload, X, Star, GripVertical, ImageIcon } from 'lucide-react';
 

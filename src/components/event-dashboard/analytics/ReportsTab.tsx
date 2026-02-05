@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Download, Mail, FileText } from 'lucide-react';
 import { EventAnalytics, ExportFormat } from '../../../types/analytics';
-import { Button } from '../../ui/Button';
+import { Button } from '../../ui/button';
 import { SectionCard } from './SectionCard';
 
 interface ReportsTabProps {

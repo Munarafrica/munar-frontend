@@ -2,7 +2,7 @@ import React from 'react';
 import { Globe2, Link2, Pencil, Trash, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { Sponsor } from '../../types/sponsors';
 import { Badge } from '../ui/badge';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { cn } from '../ui/utils';
 

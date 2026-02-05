@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Page } from '../App';
 import { TopBar } from '../components/dashboard/TopBar';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
 import { Badge } from '../components/ui/badge';
 import { cn } from '../components/ui/utils';

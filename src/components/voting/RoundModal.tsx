@@ -1,8 +1,8 @@
 // Round Modal - Create or edit a voting round
 import React, { useState, useEffect } from 'react';
 import { VotingRound } from '../../types/voting';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { X, Layers } from 'lucide-react';
 
 interface RoundModalProps {

@@ -1,7 +1,7 @@
 // Rounds Tab - Manage voting rounds and knockout stages
 import React, { useState } from 'react';
 import { VotingCampaign, VotingRound } from '../../types/voting';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

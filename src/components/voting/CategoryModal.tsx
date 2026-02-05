@@ -1,8 +1,8 @@
 // Category Modal - Create/Edit voting categories
 import React, { useState, useEffect } from 'react';
 import { VotingCategory, CreateCategoryRequest } from '../../types/voting';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { X, FolderOpen, Check } from 'lucide-react';
 
 interface CategoryModalProps {

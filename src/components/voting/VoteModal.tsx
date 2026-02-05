@@ -1,7 +1,7 @@
 // Vote Modal - Cast votes for a contestant
 import React, { useState } from 'react';
 import { Contestant } from '../../types/voting';
-import { Button } from '../ui/Button';
+import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
 import {
   X,

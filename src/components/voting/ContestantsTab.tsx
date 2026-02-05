@@ -1,8 +1,8 @@
 // Contestants Tab - Manage all contestants across categories
 import React, { useState } from 'react';
 import { Contestant, VotingCampaign } from '../../types/voting';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

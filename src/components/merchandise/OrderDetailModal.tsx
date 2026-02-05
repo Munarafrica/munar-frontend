@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Order } from '../../types/merchandise';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {

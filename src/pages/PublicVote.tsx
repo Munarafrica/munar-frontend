@@ -1,8 +1,8 @@
 // Public Voting Page - Customer-facing voting interface
 import React, { useState, useEffect } from 'react';
 import { Page } from '../App';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { PublicCategoryCard } from '../components/voting/PublicCategoryCard';
 import { PublicContestantCard } from '../components/voting/PublicContestantCard';
 import { VoteModal } from '../components/voting/VoteModal';

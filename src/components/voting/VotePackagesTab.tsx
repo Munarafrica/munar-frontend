@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { VotePackage, CreateVotePackageRequest, VotingCampaign } from '../../types/voting';
 import { votingService } from '../../services';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { cn } from '../ui/utils';
 import {
