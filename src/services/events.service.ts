@@ -54,14 +54,23 @@ const checklistConfig = [
   { id: 'voting', label: 'Enable voting', module: 'Voting', actionLabel: 'Set up' },
 ];
 
+/** Generate slug from event name */
+const slugify = (name: string) =>
+  name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+
 const loadStoredEvents = (): EventData[] => {
-  if (typeof window === 'undefined') return mockEvents;
+  if (typeof window === 'undefined') return [...mockEvents];
   const raw = window.localStorage.getItem(EVENTS_STORAGE_KEY);
-  if (!raw) return mockEvents;
+  if (!raw) return [...mockEvents];
   try {
-    return JSON.parse(raw) as EventData[];
+    const events = JSON.parse(raw) as EventData[];
+    // Ensure all events have a slug (backfill for legacy stored events)
+    return events.map(e => ({
+      ...e,
+      slug: e.slug || slugify(e.name),
+    }));
   } catch {
-    return mockEvents;
+    return [...mockEvents];
   }
 };
 
@@ -69,8 +78,6 @@ const saveStoredEvents = (events: EventData[]) => {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
   }
-  mockEvents.length = 0;
-  mockEvents.push(...events);
 };
 
 const loadProgressStore = (): Record<string, EventProgress> => {
@@ -204,17 +211,30 @@ class EventsService {
     return apiClient.get<PaginatedResponse<EventListItem>>('/events', { params });
   }
 
-  // Get single event by ID
-  async getEvent(eventId: string): Promise<EventData> {
+  // Get single event by ID or slug
+  async getEvent(eventIdOrSlug: string): Promise<EventData> {
     if (config.features.useMockData) {
       await delay(400);
       const events = loadStoredEvents();
-      const event = events.find(e => e.id === eventId);
-      if (!event) throw new Error('Event not found');
+      // Support lookup by ID or slug
+      let event = events.find(e => e.id === eventIdOrSlug || e.slug === eventIdOrSlug);
+
+      // Fallback: If not found in storage, check the immutable seed data
+      // This ensures generic URLs like /events/evt-1 always work in dev/demo mode
+      if (!event) {
+        // Reload seed data just in case memory reference was mutated
+        const seedData = (await import('./mock/data')).mockEvents;
+        event = seedData.find(e => e.id === eventIdOrSlug || e.slug === eventIdOrSlug);
+      }
+
+      if (!event) {
+        const availableIds = mockEvents.map(e => e.id).join(', ');
+        throw new Error(`Event not found. ID requested: ${eventIdOrSlug}. Available: ${availableIds}`);
+      }
       return event;
     }
 
-    const response = await apiClient.get<ApiResponse<EventData>>(`/events/${eventId}`);
+    const response = await apiClient.get<ApiResponse<EventData>>(`/events/${eventIdOrSlug}`);
     return response.data;
   }
 
@@ -229,6 +249,11 @@ class EventsService {
       const newEvent: EventData = {
         id: generateId('evt'),
         name: data.name,
+        slug: (data.subdomain || data.name)
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, ''),
         description: data.description,
         date: data.startDate,
         time: data.startTime,

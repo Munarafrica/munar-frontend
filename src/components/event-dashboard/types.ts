@@ -51,6 +51,8 @@ export interface Activity {
 export interface EventData {
   id: string;
   name: string;
+  /** URL-safe event slug for routing (e.g., 'lagos-tech-summit-2026') */
+  slug: string;
   description?: string;
   date: string;
   time: string;
@@ -65,6 +67,18 @@ export interface EventData {
   currency?: 'NGN' | 'GHS' | 'ZAR';
   status: EventStatus;
   phase: EventPhase;
+
+  // ─── Modular Architecture Fields ────────────────────────────────────
+  /** Enabled modules and their configuration */
+  enabledModules?: import('../../types/modules').ModuleConfig[];
+  /** Event branding inherited by all modules */
+  branding?: import('../../types/modules').EventBranding;
+  /** Unified event wallet for all module transactions */
+  wallet?: import('../../types/modules').EventWallet;
+  /** Owner user ID */
+  ownerId?: string;
+  /** Event creation timestamp */
+  createdAt?: string;
 }
 
 // --- Ticket Management Types ---

@@ -29,6 +29,7 @@ export const mockEvents: EventData[] = [
   {
     id: 'evt-1',
     name: 'Lagos Tech Summit 2026',
+    slug: 'lagos-tech-summit-2026',
     date: '2026-06-12',
     time: '09:00 AM WAT',
     type: 'Hybrid',
@@ -40,6 +41,7 @@ export const mockEvents: EventData[] = [
   {
     id: 'evt-2',
     name: 'Abuja Startup Summit',
+    slug: 'abuja-startup-summit',
     date: '2026-09-25',
     time: '02:00 PM WAT',
     type: 'Virtual',
@@ -51,6 +53,7 @@ export const mockEvents: EventData[] = [
   {
     id: 'evt-3',
     name: 'Port Harcourt Innovation Expo',
+    slug: 'port-harcourt-innovation-expo',
     date: '2026-11-12',
     time: '10:00 AM WAT',
     type: 'Physical',

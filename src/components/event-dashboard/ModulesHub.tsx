@@ -75,6 +75,8 @@ export const ModulesHub: React.FC<ModulesHubProps> = ({ modules, onNavigate }) =
         onNavigate?.('gallery-admin');
     } else if (moduleName === 'Analytics') {
       onNavigate?.('event-analytics');
+    } else if (moduleName === 'Event Website') {
+      onNavigate?.('website-builder');
     }
   };
 

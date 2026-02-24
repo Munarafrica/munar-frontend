@@ -45,8 +45,8 @@ export function EventProvider({ children, eventId }: EventProviderProps) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      // Load all event data in parallel
-      const [event, metrics, checklist, modules, activities] = await Promise.all([
+      // Load all event data with fallbacks for non-critical failures
+      const results = await Promise.allSettled([
         eventsService.getEvent(id),
         eventsService.getEventMetrics(id),
         eventsService.getEventChecklist(id),
@@ -54,16 +54,31 @@ export function EventProvider({ children, eventId }: EventProviderProps) {
         eventsService.getEventActivities(id),
       ]);
       
+      const [eventRes, metricsRes, checklistRes, modulesRes, activitiesRes] = results;
+
+      // Event is critical - fail if rejected
+      if (eventRes.status === 'rejected') {
+        throw eventRes.reason;
+      }
+
       setState({
-        currentEvent: event,
-        metrics,
-        checklist,
-        modules,
-        activities,
+        currentEvent: eventRes.value,
+        metrics: metricsRes.status === 'fulfilled' ? metricsRes.value : [],
+        checklist: checklistRes.status === 'fulfilled' ? checklistRes.value : [],
+        modules: modulesRes.status === 'fulfilled' ? modulesRes.value : [],
+        activities: activitiesRes.status === 'fulfilled' ? activitiesRes.value : [],
         isLoading: false,
         error: null,
       });
+
+      // Log non-critical failures
+      if (metricsRes.status === 'rejected') console.error('Metrics failed:', metricsRes.reason);
+      if (checklistRes.status === 'rejected') console.error('Checklist failed:', checklistRes.reason);
+      if (modulesRes.status === 'rejected') console.error('Modules failed:', modulesRes.reason);
+      if (activitiesRes.status === 'rejected') console.error('Activities failed:', activitiesRes.reason);
+
     } catch (err) {
+      console.error('Failed to load event data:', err);
       setState(prev => ({
         ...prev,
         isLoading: false,
