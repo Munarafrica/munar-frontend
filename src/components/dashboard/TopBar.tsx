@@ -1,14 +1,46 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Logo } from "../ui/Logo";
 import { HelpIcon, MenuIcon, NotificationIcon, SettingsIcon } from "../icons";
 import { Page } from "../../App";
 import { ModeToggle } from "../ui/mode-toggle";
+import { useAuth } from "../../contexts";
+import { useNavigate } from "react-router-dom";
 
 interface TopBarProps {
   onNavigate?: (page: Page) => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const initials = user
+    ? `${(user.firstName || user.email[0] || "").charAt(0)}${(user.lastName || "").charAt(0)}`.toUpperCase()
+    : "?";
+  const displayName = user
+    ? user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : user.email
+    : "Guest";
+  const accountLabel = user?.accountType === "organization" ? "Organization" : "Organizer";
+
+  const handleLogout = async () => {
+    setShowDropdown(false);
+    await logout();
+    navigate("/login");
+  };
+
   return (
     <div className="w-full bg-white dark:bg-slate-950 h-[72px] flex items-center justify-between px-6 sticky top-0 z-50 border-b border-slate-100/80 dark:border-slate-800/80 backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 transition-colors duration-300">
       {/* Left: Logo */}
@@ -58,15 +90,70 @@ export const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
         
         <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 hidden md:block mx-2" />
 
-        {/* Profile Avatar */}
-        <div className="flex items-center gap-3 pl-2 cursor-pointer group">
+        {/* Profile Avatar + Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <div
+            className="flex items-center gap-3 pl-2 cursor-pointer group"
+            onClick={() => setShowDropdown(!showDropdown)}
+          >
             <div className="size-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm tracking-wide shadow-md shadow-indigo-200 dark:shadow-none group-hover:shadow-lg transition-all">
-            VE
+              {initials}
             </div>
             <div className="hidden lg:block text-left">
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">Victor E.</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">Organizer</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{displayName}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1">{accountLabel}</p>
             </div>
+            <svg className="size-4 text-slate-400 dark:text-slate-500 hidden lg:block" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+
+          {/* Dropdown Menu */}
+          {showDropdown && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              {/* User Info */}
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">{displayName}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user?.email}</p>
+              </div>
+
+              {/* Menu Items */}
+              <div className="py-1">
+                <button
+                  onClick={() => { setShowDropdown(false); navigate("/profile-setup"); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <svg className="size-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Edit Profile
+                </button>
+
+                <button
+                  onClick={() => { setShowDropdown(false); navigate("/change-password"); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <svg className="size-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Change Password
+                </button>
+              </div>
+
+              {/* Logout */}
+              <div className="border-t border-slate-100 dark:border-slate-800 py-1">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                >
+                  <svg className="size-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Log Out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

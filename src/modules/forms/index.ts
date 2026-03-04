@@ -5,3 +5,4 @@
 
 export { FormManagement } from '../../pages/FormManagement';
 export { FormsPublic } from './FormsPublic';
+export { FormFill } from './FormFill';

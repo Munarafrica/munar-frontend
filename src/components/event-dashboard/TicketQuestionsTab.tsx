@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Plus, Trash2, Edit2, GripVertical, CheckSquare, AlignLeft, List, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, Edit2, GripVertical, CheckSquare, AlignLeft, List, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { cn } from '../ui/utils';
 import { TicketType } from './types';
+import { ticketsService } from '../../services';
+import { toast } from 'sonner';
 
 export interface Question {
   id: string;
@@ -15,13 +17,12 @@ export interface Question {
 
 interface TicketQuestionsTabProps {
   tickets: TicketType[];
+  eventId: string;
 }
 
-export const TicketQuestionsTab: React.FC<TicketQuestionsTabProps> = ({ tickets }) => {
-  const [questions, setQuestions] = useState<Question[]>([
-    { id: 'q1', label: 'Dietary Restrictions', type: 'text', required: false, ticketIds: ['all'] },
-    { id: 'q2', label: 'T-Shirt Size', type: 'dropdown', required: true, ticketIds: ['all'], options: ['S', 'M', 'L', 'XL', 'XXL'] },
-  ]);
+export const TicketQuestionsTab: React.FC<TicketQuestionsTabProps> = ({ tickets, eventId }) => {
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
 
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -36,33 +37,60 @@ export const TicketQuestionsTab: React.FC<TicketQuestionsTabProps> = ({ tickets 
   });
   const [optionInput, setOptionInput] = useState('');
 
+  // Load questions from API
+  useEffect(() => {
+    if (!eventId) return;
+    setIsLoadingQuestions(true);
+    ticketsService.getQuestions(eventId)
+      .then((data) => setQuestions(data as unknown as Question[]))
+      .catch(() => toast.error('Failed to load questions'))
+      .finally(() => setIsLoadingQuestions(false));
+  }, [eventId]);
+
   const handleEdit = (question: Question) => {
     setFormData(question);
     setEditingId(question.id);
     setIsAdding(true);
   };
 
-  const handleDelete = (id: string) => {
-    if(window.confirm("Delete this question?")) {
-        setQuestions(questions.filter(q => q.id !== id));
+  const handleDelete = async (id: string) => {
+    if(!window.confirm("Delete this question?")) return;
+    try {
+      await ticketsService.deleteQuestion(eventId, id);
+      setQuestions(questions.filter(q => q.id !== id));
+      toast.success('Question deleted');
+    } catch {
+      toast.error('Failed to delete question');
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.label) return;
 
-    if (editingId) {
-        setQuestions(questions.map(q => q.id === editingId ? { ...formData, id: editingId } as Question : q));
-    } else {
-        const newQuestion: Question = {
-            id: `q${Date.now()}`,
-            label: formData.label,
-            type: formData.type || 'text',
-            required: formData.required || false,
-            ticketIds: formData.ticketIds || ['all'],
-            options: formData.options || []
-        };
-        setQuestions([...questions, newQuestion]);
+    try {
+      if (editingId) {
+        const updated = await ticketsService.updateQuestion(eventId, editingId, {
+          label: formData.label!,
+          type: formData.type as any,
+          required: formData.required || false,
+          ticketIds: formData.ticketIds || ['all'],
+          options: formData.options || [],
+        });
+        setQuestions(questions.map(q => q.id === editingId ? (updated as unknown as Question) : q));
+        toast.success('Question updated');
+      } else {
+        const created = await ticketsService.createQuestion(eventId, {
+          label: formData.label!,
+          type: formData.type as any,
+          required: formData.required || false,
+          ticketIds: formData.ticketIds || ['all'],
+          options: formData.options || [],
+        });
+        setQuestions([...questions, created as unknown as Question]);
+        toast.success('Question created');
+      }
+    } catch {
+      toast.error('Failed to save question');
     }
     
     setIsAdding(false);
@@ -97,7 +125,11 @@ export const TicketQuestionsTab: React.FC<TicketQuestionsTabProps> = ({ tickets 
        </div>
 
        {/* List or Form */}
-       {isAdding ? (
+       {isLoadingQuestions ? (
+           <div className="flex items-center justify-center h-32">
+               <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+           </div>
+       ) : isAdding ? (
            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 animate-in fade-in slide-in-from-bottom-2">
                <h4 className="font-bold text-slate-900 dark:text-slate-100 mb-4">{editingId ? 'Edit Question' : 'New Question'}</h4>
                

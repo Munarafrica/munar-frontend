@@ -91,6 +91,7 @@ export interface ProfileUpdateRequest {
   organization?: string;
   currency?: string;
   avatarUrl?: string;
+  accountType?: 'individual' | 'organization';
 }
 
 // Event types for API
@@ -139,14 +140,131 @@ export interface CreateTicketRequest {
   maxPerOrder: number;
   visibility: 'Public' | 'Hidden' | 'Invite Only';
   description?: string;
+  perks?: Array<{ id: string; name: string }>;
   allowTransfer: boolean;
   allowResale: boolean;
   refundPolicy: 'Refundable' | 'Non-refundable';
   requireAttendeeInfo: boolean;
+  color?: string;
+  status?: 'Draft' | 'On Sale' | 'Sold Out' | 'Hidden';
+  sortOrder?: number;
 }
 
-export interface UpdateTicketRequest extends Partial<CreateTicketRequest> {
-  status?: 'Draft' | 'On Sale' | 'Sold Out' | 'Hidden';
+export interface UpdateTicketRequest extends Partial<CreateTicketRequest> {}
+
+// Checkout question types
+export interface TicketQuestion {
+  id: string;
+  eventId: string;
+  label: string;
+  type: 'text' | 'dropdown' | 'checkbox';
+  required: boolean;
+  ticketIds: string[];
+  options?: string[];
+  sortOrder: number;
+}
+
+export interface CreateQuestionRequest {
+  label: string;
+  type: 'text' | 'dropdown' | 'checkbox';
+  required: boolean;
+  ticketIds: string[];
+  options?: string[];
+  sortOrder?: number;
+}
+
+// Ticket settings types
+export interface TicketSettingsData {
+  id?: string;
+  eventId?: string;
+  enableTransfers: boolean;
+  enableResale: boolean;
+  resaleCap?: number;
+  refundPolicy: string;
+  supportEmail?: string;
+}
+
+// Ticket order / checkout types
+export interface CheckoutRequest {
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  items: Array<{ ticketId: string; quantity: number }>;
+  attendees?: Array<{ ticketId: string; name: string; email: string; phone?: string }>;
+  questionAnswers?: Array<{ questionId: string; questionLabel: string; answer: string }>;
+}
+
+export interface TicketOrderItem {
+  ticketId: string;
+  ticketName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface TicketOrder {
+  id: string;
+  orderReference: string;
+  buyerName: string;
+  buyerEmail: string;
+  totalAmount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'refunded' | 'cancelled';
+  items: TicketOrderItem[];
+  createdAt: string;
+}
+
+export interface CheckoutAttendee {
+  id: string;
+  name: string;
+  email: string;
+  ticketName: string;
+  orderReference: string;
+  qrCode: string;
+}
+
+export interface CheckoutResponse {
+  order: TicketOrder;
+  attendees: CheckoutAttendee[];
+  event: {
+    name: string;
+    date: string;
+    time: string;
+    venueLocation?: string;
+  };
+}
+
+export interface PublicTicket {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'Single' | 'Group';
+  groupSize?: number;
+  isFree: boolean;
+  price: number;
+  available: number;
+  quantityTotal: number;
+  minPerOrder: number;
+  maxPerOrder: number;
+  perks?: Array<{ id: string; name: string }>;
+  requireAttendeeInfo: boolean;
+}
+
+export interface PublicTicketsResponse {
+  event: {
+    id: string;
+    name: string;
+    slug: string;
+    date: string;
+    time: string;
+    endDate?: string;
+    endTime?: string;
+    type: string;
+    coverImageUrl?: string;
+    venueLocation?: string;
+    currency: string;
+  };
+  tickets: PublicTicket[];
+  questions: TicketQuestion[];
 }
 
 // File upload

@@ -12,7 +12,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
           <input
             ref={ref}
             type="checkbox"
-            className="peer appearance-none size-3.5 border border-slate-300 rounded-[2px] bg-white checked:bg-primary-500 checked:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all"
+            className="peer appearance-none size-3.5 border border-slate-300 dark:border-slate-600 rounded-[2px] bg-white dark:bg-slate-900 checked:bg-primary-500 checked:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-all"
             {...props}
           />
           <svg
@@ -23,7 +23,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        {label && <span className="text-xs text-slate-600 leading-[14px] select-none">{label}</span>}
+        {label && <span className="text-xs text-slate-600 dark:text-slate-400 leading-[14px] select-none">{label}</span>}
       </label>
     );
   }

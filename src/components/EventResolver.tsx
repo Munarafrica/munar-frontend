@@ -78,11 +78,19 @@ function EventResolverInner({ children }: { children: React.ReactNode }) {
   if (error || !currentEvent) {
     // DEV: Show error message if available
     if (error) {
+      const params = useParams<{ eventId?: string; eventSlug?: string }>();
       return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4">
           <div className="bg-red-50 text-red-600 p-4 rounded-lg max-w-lg mb-4">
             <h3 className="font-bold">Error Loading Event</h3>
-            <pre className="mt-2 text-sm whitespace-pre-wrap">{error}</pre>
+            <pre className="mt-2 text-sm whitespace-pre-wrap break-words">{error}</pre>
+            <details className="mt-2 text-xs">
+              <summary>Debug Info</summary>
+              <div className="mt-1 space-y-1 font-mono">
+                <div>eventId param: {params.eventId || 'none'}</div>
+                <div>eventSlug param: {params.eventSlug || 'none'}</div>
+              </div>
+            </details>
           </div>
           <EventNotFound />
         </div>

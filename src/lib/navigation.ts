@@ -4,6 +4,7 @@
 
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCallback } from 'react';
+import { getCurrentEventId } from './event-storage';
 
 // Legacy page type (kept for backward compatibility)
 export type LegacyPage =
@@ -29,14 +30,16 @@ export type LegacyPage =
   | 'gallery-public'
   | 'sponsors-management'
   | 'event-analytics'
-  | 'website-builder';
+  | 'website-builder'
+  | 'change-password';
 
 /**
  * Maps old page names to new React Router paths.
  * Event-scoped pages are relative to /events/:eventId/
  */
 function getRoutePath(page: LegacyPage, eventId?: string): string {
-  const eid = eventId || 'evt-1';
+  // Never fall back to mock ID 'evt-1' in real API mode
+  const eid = eventId || getCurrentEventId() || 'evt-1';
 
   const routeMap: Record<LegacyPage, string> = {
     // Auth routes
@@ -47,6 +50,7 @@ function getRoutePath(page: LegacyPage, eventId?: string): string {
     'profile-setup': '/profile-setup',
     'forgot-password': '/forgot-password',
     'reset-password': '/reset-password',
+    'change-password': '/change-password',
 
     // Platform routes
     'my-events': '/events',
@@ -105,7 +109,7 @@ export function useAppNavigate(): (page: LegacyPage) => void {
  */
 export function useEventId(): string {
   const params = useParams<{ eventId?: string; eventSlug?: string }>();
-  return params.eventId || params.eventSlug || 'evt-1';
+  return params.eventId || params.eventSlug || getCurrentEventId() || '';
 }
 
 export { getRoutePath };

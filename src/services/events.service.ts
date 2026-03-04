@@ -168,6 +168,39 @@ export interface EventListItem {
   coverImageUrl?: string;
 }
 
+/** Normalize a raw DB event row (startDate/startTime) to the EventData shape (date/time) */
+function normalizeEvent(raw: any): EventData {
+  return {
+    ...raw,
+    date: raw.date ?? raw.startDate ?? '',
+    time: raw.time ?? raw.startTime ?? '',
+    startDate: raw.startDate ?? raw.date,
+    startTime: raw.startTime ?? raw.time,
+    websiteUrl: raw.websiteUrl ?? '',
+    description: raw.description ?? '',
+    coverImageUrl: raw.coverImageUrl ?? undefined,
+    createdAt: raw.createdAt instanceof Date ? raw.createdAt.toISOString() : raw.createdAt,
+  };
+}
+
+/** Normalize a raw DB event row to the EventListItem shape */
+function normalizeEventListItem(raw: any): EventListItem {
+  const startDate = raw.startDate ?? raw.date ?? '';
+  const formattedDate = startDate
+    ? (() => { try { return new Date(startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return startDate; } })()
+    : '';
+  return {
+    id: raw.id,
+    name: raw.name,
+    type: raw.type,
+    status: raw.status === 'draft' ? 'Draft' : raw.status === 'published' ? 'Published' : raw.status === 'unpublished' ? 'Unpublished' : raw.status,
+    date: formattedDate,
+    time: raw.startTime ?? raw.time ?? '',
+    ticketsSold: raw.ticketsSold ?? 0,
+    coverImageUrl: raw.coverImageUrl,
+  };
+}
+
 class EventsService {
   // Get all events for current user
   async getEvents(params?: SearchParams): Promise<PaginatedResponse<EventListItem>> {
@@ -208,7 +241,11 @@ class EventsService {
       };
     }
 
-    return apiClient.get<PaginatedResponse<EventListItem>>('/events', { params });
+    const paginatedResponse = await apiClient.get<PaginatedResponse<any>>('/events', { params });
+    return {
+      ...paginatedResponse,
+      data: (paginatedResponse.data ?? []).map(normalizeEventListItem),
+    };
   }
 
   // Get single event by ID or slug
@@ -234,8 +271,11 @@ class EventsService {
       return event;
     }
 
-    const response = await apiClient.get<ApiResponse<EventData>>(`/events/${eventIdOrSlug}`);
-    return response.data;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = UUID_RE.test(eventIdOrSlug);
+    const url = isUuid ? `/events/${eventIdOrSlug}` : `/events/slug/${eventIdOrSlug}`;
+    const response = await apiClient.get<ApiResponse<any>>(url);
+    return normalizeEvent(response.data);
   }
 
   // Create new event
@@ -283,8 +323,8 @@ class EventsService {
       return newEvent;
     }
 
-    const response = await apiClient.post<ApiResponse<EventData>>('/events', data);
-    return response.data;
+    const response = await apiClient.post<ApiResponse<any>>('/events', data);
+    return normalizeEvent(response.data);
   }
 
   // Update event
@@ -314,8 +354,8 @@ class EventsService {
       return events[index];
     }
 
-    const response = await apiClient.patch<ApiResponse<EventData>>(`/events/${eventId}`, data);
-    return response.data;
+    const response = await apiClient.patch<ApiResponse<any>>(`/events/${eventId}`, data);
+    return normalizeEvent(response.data);
   }
 
   // Delete event
@@ -374,12 +414,20 @@ class EventsService {
 
   // Publish event
   async publishEvent(eventId: string): Promise<EventData> {
-    return this.updateEvent(eventId, { status: 'published' });
+    if (config.features.useMockData) {
+      return this.updateEvent(eventId, { status: 'published' });
+    }
+    const response = await apiClient.patch<ApiResponse<any>>(`/events/${eventId}/publish`, {});
+    return normalizeEvent(response.data);
   }
 
   // Unpublish event
   async unpublishEvent(eventId: string): Promise<EventData> {
-    return this.updateEvent(eventId, { status: 'unpublished' });
+    if (config.features.useMockData) {
+      return this.updateEvent(eventId, { status: 'unpublished' });
+    }
+    const response = await apiClient.patch<ApiResponse<any>>(`/events/${eventId}/unpublish`, {});
+    return normalizeEvent(response.data);
   }
 
   // Upload cover image
@@ -411,8 +459,19 @@ class EventsService {
       ];
     }
 
-    const response = await apiClient.get<ApiResponse<Metric[]>>(`/events/${eventId}/metrics`);
-    return response.data;
+    try {
+      const response = await apiClient.get<ApiResponse<Metric[]>>(`/events/${eventId}/metrics`);
+      return response.data;
+    } catch {
+      return [
+        { id: 'm1', label: 'Registrations', value: '0', context: 'setup' },
+        { id: 'm2', label: 'Website Views', value: '0', context: 'setup' },
+        { id: 'm3', label: 'Tickets Sold', value: '0', context: 'setup' },
+        { id: 'm4', label: 'Total Revenue', value: '₦0', context: 'setup' },
+        { id: 'm5', label: 'Check-ins', value: '0', context: 'setup' },
+        { id: 'm6', label: 'Survey Responses', value: '0', context: 'setup' },
+      ];
+    }
   }
 
   // Get event checklist
@@ -427,8 +486,12 @@ class EventsService {
       return buildChecklist(modulesWithCounts);
     }
 
-    const response = await apiClient.get<ApiResponse<ChecklistItem[]>>(`/events/${eventId}/checklist`);
-    return response.data;
+    try {
+      const response = await apiClient.get<ApiResponse<ChecklistItem[]>>(`/events/${eventId}/checklist`);
+      return response.data;
+    } catch {
+      return buildChecklist(defaultModules());
+    }
   }
 
   // Get event modules status
@@ -442,8 +505,12 @@ class EventsService {
       return progress.modules.map(m => ({ ...m, count: counts[m.name] ?? m.count ?? 0 }));
     }
 
-    const response = await apiClient.get<ApiResponse<Module[]>>(`/events/${eventId}/modules`);
-    return response.data;
+    try {
+      const response = await apiClient.get<ApiResponse<Module[]>>(`/events/${eventId}/modules`);
+      return response.data;
+    } catch {
+      return defaultModules();
+    }
   }
 
   // Get event activity feed
@@ -454,8 +521,12 @@ class EventsService {
       return progress.activities.slice(0, limit);
     }
 
-    const response = await apiClient.get<ApiResponse<Activity[]>>(`/events/${eventId}/activities`, { params: { limit } });
-    return response.data;
+    try {
+      const response = await apiClient.get<ApiResponse<Activity[]>>(`/events/${eventId}/activities`, { params: { limit } });
+      return response.data;
+    } catch {
+      return [];
+    }
   }
 
   recordActivity(eventId: string, activity: Omit<Activity, 'id' | 'timestamp'>): Activity[] {

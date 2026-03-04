@@ -6,14 +6,14 @@ import {
   Type, AlignLeft, Mail, Phone, Hash, Calendar, 
   List, CheckSquare, CircleDot, Star, Upload, 
   Trash2, GripVertical, Settings, Eye, Save, ArrowLeft,
-  Plus, Menu, X, CreditCard
+  Plus, Menu, X, CreditCard, Loader2
 } from 'lucide-react';
 import { cn } from '../../ui/utils';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 interface FormBuilderProps {
   initialForm?: Partial<Form>;
-  onSave: (form: Form) => void;
+  onSave: (form: Form) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -36,6 +36,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
   const [isMobilePropertiesOpen, setIsMobilePropertiesOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [form, setForm] = useState<Partial<Form>>({
     title: 'Untitled Form',
@@ -95,12 +96,20 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
     setForm(prev => ({ ...prev, fields: newFields }));
   };
 
-  const handleSave = () => {
-    if (!form.title) {
+  const handleSave = async () => {
+    if (!form.title || form.title.trim() === '') {
       toast.error("Please enter a form title");
+      setActiveTab('build');
       return;
     }
-    onSave(form as Form);
+    setIsSaving(true);
+    try {
+      await onSave(form as Form);
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const selectedField = form.fields?.find(f => f.id === selectedFieldId);
@@ -168,9 +177,12 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
              <option value="preview">Preview</option>
            </select>
            
-           <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2" size="sm">
-             <Save className="w-4 h-4" />
-             <span className="hidden md:inline">Save & Exit</span>
+           <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2" size="sm" disabled={isSaving}>
+             {isSaving ? (
+               <><Loader2 className="w-4 h-4 animate-spin" /><span className="hidden md:inline">Saving...</span></>
+             ) : (
+               <><Save className="w-4 h-4" /><span className="hidden md:inline">Save & Exit</span></>
+             )}
            </Button>
         </div>
       </div>
@@ -426,11 +438,39 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
            <div className="flex-1 overflow-y-auto p-8 bg-slate-50 dark:bg-slate-950/50">
               <div className="max-w-2xl mx-auto space-y-6">
                  
-                 {/* General Settings */}
+                 {/* Form Info */}
                  <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">General Settings</h3>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Form Information</h3>
                     
                     <div className="space-y-4">
+                        <div className="space-y-1.5">
+                           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Form Title</label>
+                           <input 
+                              type="text"
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+                              value={form.title || ''}
+                              onChange={(e) => setForm({...form, title: e.target.value})}
+                              placeholder="Enter form title"
+                           />
+                        </div>
+                        <div className="space-y-1.5">
+                           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
+                           <textarea 
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 resize-none"
+                              rows={3}
+                              value={form.description || ''}
+                              onChange={(e) => setForm({...form, description: e.target.value})}
+                              placeholder="Add a description..."
+                           />
+                        </div>
+                    </div>
+                 </div>
+
+                 {/* General Settings */}
+                 <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Access & Submission</h3>
+                    
+                    <div className="space-y-5">
                         <div className="flex items-center justify-between">
                            <div>
                               <h4 className="font-medium text-slate-900 dark:text-slate-100">Limit Responses</h4>
@@ -442,6 +482,8 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
                            />
                         </div>
 
+                        <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
                         <div className="flex items-center justify-between">
                            <div>
                               <h4 className="font-medium text-slate-900 dark:text-slate-100">Anonymous Submissions</h4>
@@ -451,6 +493,31 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
                               checked={form.settings?.allowAnonymous} 
                               onCheckedChange={(checked) => setForm({...form, settings: {...form.settings!, allowAnonymous: checked}})} 
                            />
+                        </div>
+
+                        <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+                        <div className="space-y-3">
+                           <div className="flex items-center justify-between">
+                              <div>
+                                 <h4 className="font-medium text-slate-900 dark:text-slate-100">Auto-Close Date</h4>
+                                 <p className="text-sm text-slate-500 dark:text-slate-400">Automatically close the form on a specific date</p>
+                              </div>
+                           </div>
+                           <input 
+                              type="datetime-local"
+                              className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+                              value={form.settings?.closeDate || ''}
+                              onChange={(e) => setForm({...form, settings: {...form.settings!, closeDate: e.target.value}})}
+                           />
+                           {form.settings?.closeDate && (
+                              <button 
+                                 onClick={() => setForm({...form, settings: {...form.settings!, closeDate: undefined}})}
+                                 className="text-xs text-red-500 hover:text-red-600 font-medium"
+                              >
+                                 Remove close date
+                              </button>
+                           )}
                         </div>
                     </div>
                  </div>
@@ -478,17 +545,21 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
                                     <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Registration Price</label>
                                     <div className="flex gap-2 mt-1">
                                        <select 
-                                          className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                                          className="w-24 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                                           value={form.settings?.currency || 'NGN'}
                                           onChange={(e) => setForm({...form, settings: {...form.settings!, currency: e.target.value}})}
                                        >
                                           <option value="NGN">NGN</option>
                                           <option value="USD">USD</option>
+                                          <option value="EUR">EUR</option>
+                                          <option value="GBP">GBP</option>
                                        </select>
                                        <input 
                                           type="number" 
-                                          className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-white dark:bg-slate-900"
+                                          className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                                           placeholder="0.00"
+                                          min="0"
+                                          step="0.01"
                                           value={form.settings?.price || ''}
                                           onChange={(e) => setForm({...form, settings: {...form.settings!, price: parseFloat(e.target.value)}})}
                                        />
@@ -506,13 +577,21 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ initialForm, onSave, o
                     <div className="space-y-1.5">
                         <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Success Message</label>
                         <textarea 
-                           className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm bg-white dark:bg-slate-900 resize-none"
+                           className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 resize-none focus:outline-none focus:border-indigo-500"
                            rows={3}
-                           value={form.settings?.confirmationMessage}
+                           value={form.settings?.confirmationMessage || ''}
                            onChange={(e) => setForm({...form, settings: {...form.settings!, confirmationMessage: e.target.value}})}
+                           placeholder="Thank you for your submission!"
                         />
                         <p className="text-xs text-slate-500">Displayed to the user after successful submission.</p>
                     </div>
+                 </div>
+
+                 {/* Form Status Info */}
+                 <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-4 text-sm text-slate-500 dark:text-slate-400 space-y-1">
+                    <p><span className="font-medium text-slate-700 dark:text-slate-300">Status:</span> <span className="capitalize">{form.status}</span></p>
+                    <p><span className="font-medium text-slate-700 dark:text-slate-300">Type:</span> <span className="capitalize">{form.type}</span></p>
+                    <p><span className="font-medium text-slate-700 dark:text-slate-300">Fields:</span> {form.fields?.length || 0}</p>
                  </div>
               </div>
            </div>

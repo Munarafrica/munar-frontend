@@ -1,24 +1,22 @@
-// Authentication Service
+// Authentication Service — full auth flow with PIN-based verification & password reset
 import { config } from '../config';
 import { apiClient } from '../lib/api-client';
-import { 
-  AuthResponse, 
-  LoginRequest, 
-  SignUpRequest, 
-  User, 
+import {
+  AuthResponse,
+  LoginRequest,
+  SignUpRequest,
+  User,
   ProfileUpdateRequest,
   ApiResponse,
-  MutationResponse 
+  MutationResponse,
 } from '../types/api';
 import { delay, mockUsers, generateId } from './mock/data';
 
 class AuthService {
-  // Login user
+  // ─── Login ──────────────────────────────────────────────
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     if (config.features.useMockData) {
       await delay(800);
-      
-      // Mock login - always succeeds for demo
       const user = mockUsers[0];
       const response: AuthResponse = {
         user,
@@ -26,10 +24,7 @@ class AuthService {
         refreshToken: 'mock-refresh-token-' + Date.now(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       };
-      
-      // Store tokens
       this.setAuthData(response);
-      
       return response;
     }
 
@@ -38,11 +33,10 @@ class AuthService {
     return response.data;
   }
 
-  // Sign up user
+  // ─── Sign Up ────────────────────────────────────────────
   async signUp(data: SignUpRequest): Promise<AuthResponse> {
     if (config.features.useMockData) {
       await delay(1000);
-      
       const newUser: User = {
         id: generateId('user'),
         email: data.email,
@@ -52,14 +46,12 @@ class AuthService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      
       const response: AuthResponse = {
         user: newUser,
         accessToken: 'mock-access-token-' + Date.now(),
         refreshToken: 'mock-refresh-token-' + Date.now(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       };
-      
       this.setAuthData(response);
       return response;
     }
@@ -69,7 +61,7 @@ class AuthService {
     return response.data;
   }
 
-  // Logout user
+  // ─── Logout ─────────────────────────────────────────────
   async logout(): Promise<void> {
     if (config.features.useMockData) {
       await delay(300);
@@ -78,13 +70,14 @@ class AuthService {
     }
 
     try {
-      await apiClient.post('/auth/logout');
+      const refreshToken = localStorage.getItem(config.auth.refreshTokenKey);
+      await apiClient.post('/auth/logout', { refreshToken });
     } finally {
       this.clearAuthData();
     }
   }
 
-  // Get current user
+  // ─── Get Current User ──────────────────────────────────
   async getCurrentUser(): Promise<User | null> {
     const token = localStorage.getItem(config.auth.tokenKey);
     if (!token) return null;
@@ -97,6 +90,8 @@ class AuthService {
 
     try {
       const response = await apiClient.get<ApiResponse<User>>('/auth/me');
+      // Update local cache
+      localStorage.setItem(config.auth.userKey, JSON.stringify(response.data));
       return response.data;
     } catch {
       this.clearAuthData();
@@ -104,20 +99,17 @@ class AuthService {
     }
   }
 
-  // Update profile
+  // ─── Update Profile ────────────────────────────────────
   async updateProfile(data: ProfileUpdateRequest): Promise<User> {
     if (config.features.useMockData) {
       await delay(500);
-      
       const currentUser = await this.getCurrentUser();
       if (!currentUser) throw new Error('Not authenticated');
-      
       const updatedUser: User = {
         ...currentUser,
         ...data,
         updatedAt: new Date().toISOString(),
       };
-      
       localStorage.setItem(config.auth.userKey, JSON.stringify(updatedUser));
       return updatedUser;
     }
@@ -127,55 +119,87 @@ class AuthService {
     return response.data;
   }
 
-  // Request password reset
+  // ─── Email Verification (PIN-based) ────────────────────
+  async verifyEmail(email: string, pin: string): Promise<MutationResponse<User>> {
+    if (config.features.useMockData) {
+      await delay(800);
+      const currentUser = await this.getCurrentUser();
+      if (currentUser) {
+        const verified = { ...currentUser, isEmailVerified: true };
+        localStorage.setItem(config.auth.userKey, JSON.stringify(verified));
+        return { success: true, message: 'Email verified successfully', data: verified };
+      }
+      return { success: true, message: 'Email verified successfully' };
+    }
+
+    const response = await apiClient.post<ApiResponse<User>>('/auth/verify-email', { email, pin });
+    // Update cached user
+    if (response.data) {
+      localStorage.setItem(config.auth.userKey, JSON.stringify(response.data));
+    }
+    return { success: true, message: response.message || 'Email verified', data: response.data };
+  }
+
+  async resendVerificationEmail(email: string): Promise<MutationResponse> {
+    if (config.features.useMockData) {
+      await delay(500);
+      return { success: true, message: 'Verification PIN sent' };
+    }
+
+    const response = await apiClient.post<ApiResponse<null>>('/auth/resend-verification', { email });
+    return { success: true, message: response.message || 'Verification PIN sent' };
+  }
+
+  // ─── Forgot Password (PIN-based) ──────────────────────
   async requestPasswordReset(email: string): Promise<MutationResponse> {
     if (config.features.useMockData) {
       await delay(800);
-      return { success: true, message: 'Password reset email sent' };
+      return { success: true, message: 'Password reset PIN sent' };
     }
 
-    return apiClient.post<MutationResponse>('/auth/forgot-password', { email });
+    const response = await apiClient.post<ApiResponse<null>>('/auth/forgot-password', { email });
+    return { success: true, message: response.message || 'Reset PIN sent' };
   }
 
-  // Reset password with token
-  async resetPassword(token: string, newPassword: string): Promise<MutationResponse> {
+  async verifyResetPin(email: string, pin: string): Promise<MutationResponse<{ verified: boolean }>> {
+    if (config.features.useMockData) {
+      await delay(500);
+      return { success: true, message: 'PIN verified', data: { verified: true } };
+    }
+
+    const response = await apiClient.post<ApiResponse<{ verified: boolean }>>('/auth/verify-reset-pin', { email, pin });
+    return { success: true, message: response.message || 'PIN verified', data: response.data };
+  }
+
+  async resetPassword(email: string, pin: string, newPassword: string): Promise<MutationResponse> {
     if (config.features.useMockData) {
       await delay(800);
       return { success: true, message: 'Password reset successfully' };
     }
 
-    return apiClient.post<MutationResponse>('/auth/reset-password', { token, newPassword });
+    const response = await apiClient.post<ApiResponse<null>>('/auth/reset-password', { email, pin, password: newPassword });
+    return { success: true, message: response.message || 'Password reset successfully' };
   }
 
-  // Verify email
-  async verifyEmail(token: string): Promise<MutationResponse> {
+  // ─── Change Password (authenticated) ──────────────────
+  async changePassword(currentPassword: string, newPassword: string): Promise<MutationResponse> {
     if (config.features.useMockData) {
       await delay(500);
-      return { success: true, message: 'Email verified successfully' };
+      return { success: true, message: 'Password changed successfully' };
     }
 
-    return apiClient.post<MutationResponse>('/auth/verify-email', { token });
+    const response = await apiClient.post<ApiResponse<null>>('/auth/change-password', { currentPassword, newPassword });
+    return { success: true, message: response.message || 'Password changed' };
   }
 
-  // Resend verification email
-  async resendVerificationEmail(): Promise<MutationResponse> {
-    if (config.features.useMockData) {
-      await delay(500);
-      return { success: true, message: 'Verification email sent' };
-    }
-
-    return apiClient.post<MutationResponse>('/auth/resend-verification');
-  }
-
-  // Refresh token
+  // ─── Refresh Token ────────────────────────────────────
   async refreshToken(): Promise<AuthResponse> {
     const refreshToken = localStorage.getItem(config.auth.refreshTokenKey);
-    
+
     if (config.features.useMockData) {
       await delay(300);
       const user = await this.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
-      
       return {
         user,
         accessToken: 'mock-access-token-' + Date.now(),
@@ -189,7 +213,7 @@ class AuthService {
     return response.data;
   }
 
-  // Helper methods
+  // ─── Helpers ──────────────────────────────────────────
   private setAuthData(auth: AuthResponse): void {
     localStorage.setItem(config.auth.tokenKey, auth.accessToken);
     localStorage.setItem(config.auth.refreshTokenKey, auth.refreshToken);
@@ -202,7 +226,6 @@ class AuthService {
     localStorage.removeItem(config.auth.userKey);
   }
 
-  // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!localStorage.getItem(config.auth.tokenKey);
   }

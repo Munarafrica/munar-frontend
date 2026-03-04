@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { TopBar } from "../components/dashboard/TopBar";
 import { CreateTicketModal } from "../components/CreateTicketModal";
 import { TicketType, Attendee, TicketStatus, Page } from "../components/event-dashboard/types";
@@ -6,10 +6,13 @@ import { Button } from "../components/ui/button";
 import { TicketValidationTab } from "../components/event-dashboard/TicketValidationTab";
 import { TicketQuestionsTab } from "../components/event-dashboard/TicketQuestionsTab";
 import { TicketSettingsTab } from "../components/event-dashboard/TicketSettingsTab";
-import { Plus, Users, QrCode, MessageSquare, Settings, Search, Filter, MoreVertical, AlertCircle, Copy, Trash2, Edit, Ticket, ExternalLink, Link as LinkIcon, BarChart3, CreditCard, ChevronLeft } from 'lucide-react';
+import { AttendeeDetailModal } from "../components/event-dashboard/AttendeeDetailModal";
+import { Plus, Users, QrCode, MessageSquare, Settings, Search, Filter, MoreVertical, AlertCircle, Copy, Trash2, Edit, Ticket, ExternalLink, Link as LinkIcon, BarChart3, CreditCard, ChevronLeft, Loader2 } from 'lucide-react';
 import { cn } from "../components/ui/utils";
 import { eventsService, ticketsService } from "../services";
 import { getCurrentEventId } from "../lib/event-storage";
+import { toast } from 'sonner';
+import { useTickets } from "../hooks";
 
 interface TicketManagementProps {
   onNavigate?: (page: Page) => void;
@@ -18,113 +21,125 @@ interface TicketManagementProps {
 export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState<'types' | 'attendees' | 'validation' | 'questions' | 'settings'>('types');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const eventName = 'Lagos Tech Summit 2026';
-    const eventId = getCurrentEventId();
-  
-  const [tickets, setTickets] = useState<TicketType[]>([
-      {
-          id: 't1',
-          name: 'Early Bird',
-          type: 'Single',
-          isFree: false,
-          price: 5000,
-          quantitySold: 45,
-          quantityTotal: 100,
-          status: 'On Sale',
-          salesStart: '2026-01-01T09:00',
-          salesEnd: '2026-06-12T09:00',
-          minPerOrder: 1,
-          maxPerOrder: 5,
-          visibility: 'Public',
-          allowTransfer: true,
-          allowResale: false,
-          refundPolicy: 'Refundable',
-          requireAttendeeInfo: true
-      },
-      {
-          id: 't2',
-          name: 'VIP Table',
-          type: 'Group',
-          groupSize: 5,
-          isFree: false,
-          price: 150000,
-          quantitySold: 2,
-          quantityTotal: 10,
-          status: 'On Sale',
-          salesStart: '2026-01-01T09:00',
-          salesEnd: '2026-06-12T09:00',
-          minPerOrder: 1,
-          maxPerOrder: 2,
-          visibility: 'Public',
-          allowTransfer: true,
-          allowResale: true,
-          refundPolicy: 'Non-refundable',
-          requireAttendeeInfo: true
+  const [editingTicket, setEditingTicket] = useState<TicketType | null>(null);
+  const [selectedAttendee, setSelectedAttendee] = useState<Attendee | null>(null);
+  const eventId = getCurrentEventId();
+  const [eventSlug, setEventSlug] = useState<string>('');
+  const [eventName, setEventName] = useState<string>('');
+
+  // Fetch event info for slug and name
+  useEffect(() => {
+    if (!eventId) return;
+    eventsService.getEvent(eventId).then(ev => {
+      if (ev) {
+        setEventSlug(ev.slug || ev.id);
+        setEventName(ev.name || 'Event');
       }
-  ]);
+    }).catch(() => {});
+  }, [eventId]);
 
-  const [attendees, setAttendees] = useState<Attendee[]>([
-      { id: 'a1', name: 'John Doe', email: 'john@example.com', ticketTypeId: 't1', ticketTypeName: 'Early Bird', purchaseDate: '2026-01-15', status: 'Confirmed', checkedIn: false },
-      { id: 'a2', name: 'Jane Smith', email: 'jane@example.com', ticketTypeId: 't1', ticketTypeName: 'Early Bird', purchaseDate: '2026-01-16', status: 'Confirmed', checkedIn: true },
-      { id: 'a3', name: 'Acme Corp', email: 'contact@acme.com', ticketTypeId: 't2', ticketTypeName: 'VIP Table', purchaseDate: '2026-01-20', status: 'Confirmed', checkedIn: false },
-  ]);
+  const {
+    tickets,
+    isLoading,
+    attendees,
+    isLoadingAttendees,
+    fetchTickets,
+    createTicket,
+    updateTicket,
+    deleteTicket,
+    duplicateTicket,
+    fetchAttendees,
+    checkInAttendee,
+    undoCheckIn,
+    exportAttendees,
+  } = useTickets({ eventId });
 
-    useEffect(() => {
-        ticketsService.getTickets(eventId).then(setTickets).catch(() => null);
-    }, [eventId]);
+  // Fetch attendees when switching to attendees or validation tab
+  useEffect(() => {
+    if (activeTab === 'attendees' || activeTab === 'validation') {
+      fetchAttendees();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCreateTicket = (newTicket: Partial<TicketType>) => {
-            ticketsService.createTicket(eventId, newTicket as any).then((ticket) => {
-                ticketsService.getTickets(eventId).then((list) => {
-                    setTickets(list);
-                    eventsService.updateModuleCount(
-                        eventId,
-                        'Tickets',
-                        list.length,
-                        `Created ticket "${ticket.name || 'New ticket'}"`,
-                        'ticket'
-                    );
-                });
-            }).catch(() => null);
+  const handleCreateTicket = async (newTicket: Partial<TicketType>) => {
+    const ticket = await createTicket(newTicket);
+    if (ticket) {
+      eventsService.updateModuleCount(
+        eventId,
+        'Tickets',
+        tickets.length + 1,
+        `Created ticket "${ticket.name || 'New ticket'}"`,
+        'ticket'
+      );
+      toast.success(`Ticket "${ticket.name}" created`);
+    }
   };
 
-  const handleDeleteTicket = (id: string) => {
-      if(window.confirm("Are you sure you want to delete this ticket?")) {
-                ticketsService.deleteTicket(eventId, id).then(() => {
-                    ticketsService.getTickets(eventId).then((list) => {
-                        setTickets(list);
-                        eventsService.updateModuleCount(
-                            eventId,
-                            'Tickets',
-                            list.length,
-                            'Ticket deleted',
-                            'ticket'
-                        );
-                    });
-                }).catch(() => null);
-      }
+  const handleEditTicket = async (updatedData: Partial<TicketType>) => {
+    if (!editingTicket) return;
+    const updated = await updateTicket(editingTicket.id, updatedData);
+    if (updated) {
+      toast.success(`Ticket "${updated.name}" updated`);
+    }
+    setEditingTicket(null);
   };
 
-  const handleCheckIn = (attendeeId: string, status: boolean) => {
-    setAttendees(attendees.map(a => a.id === attendeeId ? { ...a, checkedIn: status } : a));
+  const handleDeleteTicket = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this ticket?")) return;
+    const success = await deleteTicket(id);
+    if (success) {
+      eventsService.updateModuleCount(
+        eventId,
+        'Tickets',
+        tickets.length - 1,
+        'Ticket deleted',
+        'ticket'
+      );
+      toast.success('Ticket deleted');
+    }
   };
 
-    const slugify = (value: string) =>
-        value
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)+/g, '') || 'event';
+  const handleDuplicateTicket = async (id: string) => {
+    const dup = await duplicateTicket(id);
+    if (dup) {
+      toast.success(`Ticket duplicated as "${dup.name}"`);
+    }
+  };
 
-    const eventSubdomain = slugify(eventName);
-    const ticketPublicUrl = `https://${eventSubdomain}.munar.com/tickets`;
+  const handleCheckIn = async (attendeeId: string, status: boolean) => {
+    if (status) {
+      const ok = await checkInAttendee(attendeeId);
+      if (ok) toast.success('Attendee checked in');
+    } else {
+      const ok = await undoCheckIn(attendeeId);
+      if (ok) toast.success('Check-in undone');
+    }
+  };
+
+  const handleExport = async () => {
+    await exportAttendees('csv');
+    toast.success('Attendees exported');
+  };
+
+  const openEditModal = (ticket: TicketType) => {
+    setEditingTicket(ticket);
+    setIsCreateModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsCreateModalOpen(false);
+    setEditingTicket(null);
+  };
+
+    const ticketPublicUrl = eventSlug ? `${window.location.origin}/e/${eventSlug}/tickets` : '';
 
     const copyLink = async (url: string) => {
         try {
             await navigator.clipboard.writeText(url);
-            // Optional: hook up toast here
+            toast.success('Link copied to clipboard');
         } catch (err) {
             console.error('Failed to copy link', err);
+            toast.error('Failed to copy link');
         }
     };
 
@@ -232,7 +247,11 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                     {/* TICKET TYPES TAB */}
                     {activeTab === 'types' && (
                         <div className="space-y-6">
-                            {tickets.length === 0 ? (
+                            {isLoading ? (
+                                <div className="flex items-center justify-center h-64">
+                                    <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+                                </div>
+                            ) : tickets.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-64 text-center">
                                     <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                                         <Ticket className="w-8 h-8 text-slate-400 dark:text-slate-500" />
@@ -297,10 +316,10 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                                                     </td>
                                                     <td className="py-4 px-4 text-right">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button className="p-1 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Edit">
+                                                            <button onClick={() => openEditModal(ticket)} className="p-1 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Edit">
                                                                 <Edit className="w-4 h-4" />
                                                             </button>
-                                                            <button className="p-1 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Duplicate">
+                                                            <button onClick={() => handleDuplicateTicket(ticket.id)} className="p-1 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Duplicate">
                                                                 <Copy className="w-4 h-4" />
                                                             </button>
                                                             <button 
@@ -330,6 +349,7 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                                     <input 
                                         type="text" 
                                         placeholder="Search attendees..." 
+                                        onChange={(e) => fetchAttendees({ search: e.target.value })}
                                         className="w-full pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-800 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white dark:bg-slate-950 dark:text-slate-200"
                                     />
                                 </div>
@@ -338,10 +358,21 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                                         <Filter className="w-4 h-4" />
                                         Filter
                                     </Button>
-                                    <Button variant="outline" className="dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800">Export CSV</Button>
+                                    <Button variant="outline" onClick={handleExport} className="dark:bg-slate-900 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800">Export CSV</Button>
                                 </div>
                             </div>
                             
+                            {isLoadingAttendees ? (
+                                <div className="flex items-center justify-center h-48">
+                                    <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                                </div>
+                            ) : attendees.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-48 text-center">
+                                    <Users className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
+                                    <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">No attendees yet</h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Attendees will appear here once tickets are purchased.</p>
+                                </div>
+                            ) : (
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
@@ -354,12 +385,26 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {attendees.map(attendee => (
-                                        <tr key={attendee.id}>
+                                        <tr 
+                                            key={attendee.id} 
+                                            className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 cursor-pointer"
+                                            onClick={() => setSelectedAttendee(attendee)}
+                                        >
                                             <td className="py-3 px-4 font-medium text-slate-900 dark:text-slate-100">{attendee.name}</td>
                                             <td className="py-3 px-4 text-slate-600 dark:text-slate-400">{attendee.email}</td>
-                                            <td className="py-3 px-4 text-slate-600 dark:text-slate-400">{attendee.ticketTypeName}</td>
                                             <td className="py-3 px-4">
-                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                                    {attendee.ticketTypeName || '—'}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                <span className={cn(
+                                                    "inline-flex items-center px-2 py-0.5 rounded text-xs font-medium",
+                                                    attendee.status === 'Confirmed' && "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                                                    attendee.status === 'Checked In' && "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                                    attendee.status === 'Cancelled' && "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+                                                    attendee.status === 'Pending' && "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+                                                )}>
                                                     {attendee.status}
                                                 </span>
                                             </td>
@@ -377,31 +422,40 @@ export const TicketManagement: React.FC<TicketManagementProps> = ({ onNavigate }
                                     ))}
                                 </tbody>
                             </table>
+                            )}
                         </div>
                     )}
 
                     {/* NEW TABS */}
                     {activeTab === 'validation' && (
-                        <TicketValidationTab attendees={attendees} onCheckIn={handleCheckIn} />
+                        <TicketValidationTab attendees={attendees} onCheckIn={handleCheckIn} eventId={eventId} />
                     )}
                     
                     {activeTab === 'questions' && (
-                        <TicketQuestionsTab tickets={tickets} />
+                        <TicketQuestionsTab tickets={tickets} eventId={eventId} />
                     )}
                     
                     {activeTab === 'settings' && (
-                        <TicketSettingsTab />
+                        <TicketSettingsTab eventId={eventId} />
                     )}
 
                 </div>
             </div>
        </main>
 
-       {/* Create Ticket Modal */}
+       {/* Create / Edit Ticket Modal */}
        <CreateTicketModal 
           isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)}
-          onSave={handleCreateTicket}
+          onClose={closeModal}
+          onSave={editingTicket ? handleEditTicket : handleCreateTicket}
+          editTicket={editingTicket}
+       />
+
+       {/* Attendee Detail Modal */}
+       <AttendeeDetailModal
+          attendee={selectedAttendee}
+          onClose={() => setSelectedAttendee(null)}
+          tickets={tickets}
        />
     </div>
   );

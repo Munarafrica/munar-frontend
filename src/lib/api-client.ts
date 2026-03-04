@@ -8,11 +8,13 @@ interface RequestConfig {
   headers?: Record<string, string>;
   params?: Record<string, string | number | boolean | undefined>;
   timeout?: number;
+  skipAuthRefresh?: boolean;
 }
 
 class ApiClient {
   private baseUrl: string;
   private defaultTimeout: number;
+  private refreshPromise: Promise<boolean> | null = null;
 
   constructor() {
     this.baseUrl = config.api.baseUrl;
@@ -85,13 +87,15 @@ class ApiClient {
 
       // Handle 401 - Unauthorized (token expired)
       if (response.status === 401) {
-        // Clear auth data and redirect to login
-        localStorage.removeItem(config.auth.tokenKey);
-        localStorage.removeItem(config.auth.refreshTokenKey);
-        localStorage.removeItem(config.auth.userKey);
-        
-        // Dispatch custom event for auth context to handle
-        window.dispatchEvent(new CustomEvent('auth:logout'));
+        // Don't try to refresh if this IS the refresh request
+        if (!isJson) {
+          error = {
+            code: 'UNAUTHORIZED',
+            message: response.statusText || 'Unauthorized',
+            statusCode: response.status,
+          };
+        }
+        throw new ApiException(error, response.status);
       }
 
       throw new ApiException(error, response.status);
@@ -102,6 +106,55 @@ class ApiClient {
     }
 
     return response.text() as unknown as T;
+  }
+
+  // Attempt to refresh the access token using the stored refresh token
+  private async tryRefreshToken(): Promise<boolean> {
+    // If already refreshing, wait for the existing promise
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    const refreshToken = localStorage.getItem(config.auth.refreshTokenKey);
+    if (!refreshToken) return false;
+
+    this.refreshPromise = (async () => {
+      try {
+        const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        if (!response.ok) return false;
+
+        const result = await response.json();
+        const data = result.data || result;
+        
+        if (data.accessToken) {
+          localStorage.setItem(config.auth.tokenKey, data.accessToken);
+          if (data.refreshToken) {
+            localStorage.setItem(config.auth.refreshTokenKey, data.refreshToken);
+          }
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
+  // Force logout - clear tokens and dispatch event
+  private forceLogout(): void {
+    localStorage.removeItem(config.auth.tokenKey);
+    localStorage.removeItem(config.auth.refreshTokenKey);
+    localStorage.removeItem(config.auth.userKey);
+    window.dispatchEvent(new CustomEvent('auth:logout'));
   }
 
   // Make request with timeout
@@ -133,6 +186,29 @@ class ApiClient {
       const response = await fetch(url, fetchConfig);
       return this.handleResponse<T>(response);
     } catch (error) {
+      // If 401 and not already a refresh-skip request, try refreshing
+      if (
+        error instanceof ApiException &&
+        error.statusCode === 401 &&
+        !requestConfig?.skipAuthRefresh &&
+        !endpoint.includes('/auth/refresh') &&
+        !endpoint.includes('/auth/login')
+      ) {
+        const refreshed = await this.tryRefreshToken();
+        if (refreshed) {
+          // Retry the original request with the new token
+          clearTimeout(timeoutId);
+          return this.request<T>(method, endpoint, data, {
+            ...requestConfig,
+            skipAuthRefresh: true,
+          });
+        } else {
+          // Refresh failed, force logout
+          this.forceLogout();
+          throw error;
+        }
+      }
+
       if (error instanceof ApiException) {
         throw error;
       }

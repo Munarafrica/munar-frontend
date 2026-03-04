@@ -123,11 +123,17 @@ export interface Attendee {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   ticketTypeId: string;
   ticketTypeName: string;
   purchaseDate: string;
-  status: 'Confirmed' | 'Pending' | 'Cancelled';
+  status: 'Confirmed' | 'Checked In' | 'Cancelled' | 'Pending';
   checkedIn: boolean;
+  checkedInAt?: string | null;
+  orderReference?: string;
+  qrCode?: string;
+  questionAnswers?: Array<{ questionId: string; questionLabel: string; answer: string }>;
+  metadata?: any;
 }
 
 // --- Speakers & Schedule Types ---
@@ -163,7 +169,7 @@ export interface Session {
 
 // --- Forms & Surveys Types ---
 
-export type FormType = 'registration' | 'survey' | 'custom';
+export type FormType = 'registration' | 'survey' | 'feedback' | 'custom';
 export type FormStatus = 'draft' | 'published' | 'closed' | 'scheduled';
 export type FormFieldType = 'text' | 'textarea' | 'email' | 'phone' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'radio' | 'rating' | 'file';
 

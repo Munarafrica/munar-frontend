@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TopBar } from "../components/dashboard/TopBar";
 import { Page, Form, FormType } from "../components/event-dashboard/types";
 import { Button } from "../components/ui/button";
-import { Plus, FileText, BarChart2, MoreVertical, Edit2, Trash2, Eye, Copy, ChevronLeft, Menu, X, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { Plus, FileText, BarChart2, MoreVertical, Edit2, Trash2, Eye, Copy, ChevronLeft, Menu, X, ExternalLink, Link as LinkIcon, Loader2, Send, XCircle, Globe } from 'lucide-react';
 import { cn } from "../components/ui/utils";
 import { FormBuilder } from "../components/event-dashboard/forms/FormBuilder";
 import { FormResponseViewer } from "../components/event-dashboard/forms/FormResponseViewer";
 import { eventsService, formsService } from "../services";
 import { getCurrentEventId } from "../lib/event-storage";
+import { useForms } from "../hooks/useForms";
+import { useEvent } from "../contexts";
+import { toast } from 'sonner';
 
 interface FormManagementProps {
   onNavigate?: (page: Page) => void;
@@ -16,66 +19,48 @@ interface FormManagementProps {
 export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) => {
   const [view, setView] = useState<'list' | 'builder' | 'responses'>('list');
   const eventId = getCurrentEventId();
-  const [forms, setForms] = useState<Form[]>([
-    {
-      id: 'f1',
-      title: 'General Registration',
-      description: 'Standard attendee registration form',
-      type: 'registration',
-      status: 'published',
-      responseCount: 45,
-      createdAt: '2026-01-10T09:00:00',
-      updatedAt: '2026-01-15T14:30:00',
-      fields: [
-        { id: 'field1', type: 'text', label: 'Full Name', required: true },
-        { id: 'field2', type: 'email', label: 'Email Address', required: true },
-      ],
-      settings: { isPaid: true, price: 5000, currency: 'NGN', allowAnonymous: false, oneResponsePerUser: true }
-    },
-    {
-      id: 'f2',
-      title: 'Post-Event Feedback',
-      description: 'Survey for attendee satisfaction',
-      type: 'survey',
-      status: 'draft',
-      responseCount: 0,
-      createdAt: '2026-01-20T10:00:00',
-      updatedAt: '2026-01-20T10:00:00',
-      fields: [],
-      settings: { isPaid: false, allowAnonymous: true, oneResponsePerUser: false }
-    }
-  ]);
+  const { currentEvent } = useEvent();
+  const eventSlug = currentEvent?.slug || eventId;
+
+  const {
+    forms,
+    isLoading,
+    fetchForms,
+    createForm,
+    updateForm,
+    deleteForm: deleteFormHook,
+    duplicateForm: duplicateFormHook,
+    publishForm: publishFormHook,
+    closeForm: closeFormHook,
+  } = useForms({ eventId, autoFetch: true });
 
   const [currentForm, setCurrentForm] = useState<Form | undefined>(undefined);
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
+  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+  const [newFormName, setNewFormName] = useState('');
 
-  const eventName = 'Lagos Tech Summit 2026';
-  const slugify = (value: string) =>
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)+/g, '') || 'event';
-
-  const eventSubdomain = slugify(eventName);
-  const formsBaseUrl = `https://${eventSubdomain}.munar.com/forms`;
+  const eventName = currentEvent?.name || 'My Event';
+  const formsBaseUrl = `${window.location.origin}/e/${eventSlug}/forms`;
 
   const copyLink = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard');
     } catch (err) {
       console.error('Failed to copy link', err);
     }
   };
 
   const handleCreateClick = () => {
+    setNewFormName('');
     setIsTypeModalOpen(true);
   };
 
   const startNewForm = (type: FormType) => {
+    const formTitle = newFormName.trim() || (type === 'registration' ? 'New Registration' : type === 'survey' ? 'New Survey' : 'Untitled Form');
     setCurrentForm({
       id: `f${Date.now()}`,
-      title: type === 'registration' ? 'New Registration' : type === 'survey' ? 'New Survey' : 'Untitled Form',
+      title: formTitle,
       description: '',
       type,
       status: 'draft',
@@ -99,17 +84,37 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
   };
 
   const handleDeleteForm = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this form?")) {
-      await formsService.deleteForm(eventId, id);
-      const list = await formsService.getForms(eventId).catch(() => []);
-      setForms(list);
-      eventsService.updateModuleCount(
-        eventId,
-        'Forms and surveys',
-        list.length,
-        'Form deleted',
-        'file-text'
-      );
+    if (window.confirm("Are you sure you want to delete this form? All responses will be lost.")) {
+      const success = await deleteFormHook(id);
+      if (success) {
+        toast.success('Form deleted');
+        eventsService.updateModuleCount(
+          eventId,
+          'Forms and surveys',
+          forms.length - 1,
+          'Form deleted',
+          'file-text'
+        );
+      }
+    }
+  };
+
+  const handleDuplicateForm = async (id: string) => {
+    const dup = await duplicateFormHook(id);
+    if (dup) toast.success(`Duplicated as "${dup.title}"`);
+  };
+
+  const handlePublishForm = async (form: Form) => {
+    if (form.status === 'published') {
+      const updated = await closeFormHook(form.id);
+      if (updated) toast.success('Form closed');
+    } else {
+      if ((form.fields || []).length === 0) {
+        toast.error('Add at least one field before publishing');
+        return;
+      }
+      const updated = await publishFormHook(form.id);
+      if (updated) toast.success('Form published! It is now accepting responses.');
     }
   };
 
@@ -121,25 +126,26 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
   const handleSaveForm = async (savedForm: Form) => {
     const isExisting = forms.some(f => f.id === savedForm.id);
     if (isExisting) {
-      const updated = await formsService.updateForm(eventId, savedForm.id, savedForm);
-      setForms(forms.map(f => f.id === savedForm.id ? updated : f));
+      await updateForm(savedForm.id, savedForm);
+      toast.success('Form saved');
     } else {
-      const created = await formsService.createForm(eventId, {
+      const created = await createForm({
         title: savedForm.title,
         description: savedForm.description,
         type: savedForm.type,
         fields: savedForm.fields,
         settings: savedForm.settings,
       });
-      const list = await formsService.getForms(eventId).catch(() => []);
-      setForms(list.length ? list : [...forms, created]);
-      eventsService.updateModuleCount(
-        eventId,
-        'Forms and surveys',
-        (list.length ? list.length : forms.length + 1),
-        `Created form "${created.title || 'New form'}"`,
-        'file-text'
-      );
+      if (created) {
+        eventsService.updateModuleCount(
+          eventId,
+          'Forms and surveys',
+          forms.length + 1,
+          `Created form "${created.title || 'New form'}"`,
+          'file-text'
+        );
+        toast.success('Form created');
+      }
     }
     setView('list');
     setCurrentForm(undefined);
@@ -187,7 +193,11 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
 
             {/* Forms List */}
             <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                {forms.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+                    </div>
+                ) : forms.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-center p-8">
                         <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                             <FileText className="w-8 h-8 text-slate-400 dark:text-slate-500" />
@@ -246,7 +256,10 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
                                             {new Date(form.updatedAt).toLocaleDateString()}
                                         </td>
                                         <td className="py-4 px-4 text-right">
-                                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handlePublishForm(form)} className={cn("p-1.5 transition-colors", form.status === 'published' ? "text-green-500 hover:text-amber-600" : "text-slate-400 hover:text-green-600 dark:hover:text-green-400")} title={form.status === 'published' ? 'Close form' : 'Publish form'}>
+                                              {form.status === 'published' ? <XCircle className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                                            </button>
                                             <button onClick={() => handleEditForm(form)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Edit Builder">
                                               <Edit2 className="w-4 h-4" />
                                             </button>
@@ -269,7 +282,7 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
                                             >
                                               <ExternalLink className="w-4 h-4" />
                                             </a>
-                                            <button className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Duplicate">
+                                            <button onClick={() => handleDuplicateForm(form.id)} className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" title="Duplicate">
                                               <Copy className="w-4 h-4" />
                                             </button>
                                             <button onClick={() => handleDeleteForm(form.id)} className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Delete">
@@ -309,6 +322,26 @@ export const FormManagement: React.FC<FormManagementProps> = ({ onNavigate }) =>
                     <button onClick={() => setIsTypeModalOpen(false)} className="text-slate-400 hover:text-slate-500"><Trash2 className="w-5 h-5 opacity-0" /><span className="text-xl">×</span></button>
                 </div>
                 <div className="p-6 space-y-4">
+                    {/* Form Name Input */}
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Form Name</label>
+                        <input
+                            type="text"
+                            value={newFormName}
+                            onChange={(e) => setNewFormName(e.target.value)}
+                            placeholder="e.g. Event Registration, Post-Event Survey..."
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                            autoFocus
+                        />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 pt-2">
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
+                        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Select Type</span>
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800"></div>
+                    </div>
+                    
                     <button 
                         onClick={() => startNewForm('registration')}
                         className="w-full flex items-start gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-left group"

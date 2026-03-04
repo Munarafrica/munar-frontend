@@ -10,10 +10,11 @@ import { setCurrentEventId } from '../../lib/event-storage';
 interface EventHeaderProps {
   event: EventData;
   onPublish: () => void;
+  onUnpublish?: () => void;
   onNavigate?: (page: Page) => void;
 }
 
-export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNavigate }) => {
+export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onUnpublish, onNavigate }) => {
     const handleEventSettings = () => {
         const website = event.websiteUrl?.replace(/^https?:\/\//, '') || '';
         const isSubdomain = website.endsWith('.munar.site');
@@ -87,9 +88,10 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
                                 </div>
 
                                 {event.description && (
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl">
-                                        {event.description}
-                                    </p>
+                                    <p
+                                        className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl [&_a]:text-indigo-500 [&_a]:underline"
+                                        dangerouslySetInnerHTML={{ __html: event.description }}
+                                    />
                                 )}
 
                 {/* Meta Info */}
@@ -106,10 +108,22 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
                         <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                         <span>{event.type} Event</span>
                     </div>
-                    <a href={event.websiteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline">
+                    {event.slug ? (
+                      <a href={`${window.location.origin}/e/${event.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline">
+                        <Globe className="w-4 h-4" />
+                        <span>{window.location.host}/e/{event.slug}</span>
+                      </a>
+                    ) : event.websiteUrl ? (
+                      <a href={event.websiteUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline">
                         <Globe className="w-4 h-4" />
                         <span>{event.websiteUrl.replace(/^https?:\/\//, '')}</span>
-                    </a>
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Globe className="w-4 h-4" />
+                        <span>No website yet</span>
+                      </span>
+                    )}
                 </div>
             </div>
 
@@ -124,13 +138,27 @@ export const EventHeader: React.FC<EventHeaderProps> = ({ event, onPublish, onNa
                     Event Settings
                 </Button>
                 <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 hidden md:block" />
-                <Button variant="outline" className="gap-2 h-9 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 bg-transparent">
+                <Button 
+                    variant="outline" 
+                    className="gap-2 h-9 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 bg-transparent"
+                    onClick={() => window.open(`/e/${event.slug}`, '_blank')}
+                >
                     <Eye className="w-4 h-4" />
                     Preview
                 </Button>
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 shadow-sm shadow-indigo-200 dark:shadow-none" onClick={onPublish}>
+                {event.status === 'published' ? (
+                  <Button
+                    variant="outline"
+                    className="gap-2 h-9 px-6 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 bg-transparent"
+                    onClick={onUnpublish}
+                  >
+                    Unpublish
+                  </Button>
+                ) : (
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-6 shadow-sm shadow-indigo-200 dark:shadow-none" onClick={onPublish}>
                     Publish Event
-                </Button>
+                  </Button>
+                )}
             </div>
         </div>
     </div>

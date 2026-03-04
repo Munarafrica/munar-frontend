@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Session, Speaker } from '../types';
 import { Button } from '../../ui/button';
-import { Plus, Search, Calendar, MapPin, Users, Edit2, Trash2, Clock, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { Plus, Search, Calendar, MapPin, Users, Edit2, Trash2, Clock, MoreHorizontal, ChevronRight, Loader2 } from 'lucide-react';
 import { SessionModal } from './SessionModal';
 import { cn } from '../../ui/utils';
 
 interface ScheduleTabProps {
   sessions: Session[];
   speakers: Speaker[];
-  onAddSession: (session: Partial<Session>) => void;
-  onEditSession: (session: Session) => void;
+  isLoading?: boolean;
+  onAddSession: (session: Partial<Session>) => void | Promise<void>;
+  onEditSession: (session: Session) => void | Promise<void>;
   onDeleteSession: (id: string) => void;
 }
 
-export const ScheduleTab: React.FC<ScheduleTabProps> = ({ sessions, speakers, onAddSession, onEditSession, onDeleteSession }) => {
+export const ScheduleTab: React.FC<ScheduleTabProps> = ({ sessions, speakers, isLoading, onAddSession, onEditSession, onDeleteSession }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +128,11 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({ sessions, speakers, on
 
       {/* Schedule List */}
       <div className="space-y-8">
-        {Object.keys(groupedSessions).length === 0 ? (
+        {isLoading ? (
+             <div className="flex items-center justify-center py-16">
+                <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+             </div>
+        ) : Object.keys(groupedSessions).length === 0 ? (
              <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center">
                 <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                     <Calendar className="w-8 h-8 text-slate-300 dark:text-slate-500" />

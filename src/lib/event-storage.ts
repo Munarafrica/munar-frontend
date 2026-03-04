@@ -1,6 +1,19 @@
+import { config } from '../config';
+
+/** Returns null (not a fallback mock ID) when using real API, to avoid crashing the backend */
 export const getCurrentEventId = () => {
-  if (typeof window === 'undefined') return 'evt-1';
-  return window.localStorage.getItem('munar_current_event_id') || 'evt-1';
+  if (typeof window === 'undefined') return null;
+  const stored = window.localStorage.getItem('munar_current_event_id');
+  if (!stored) return null;
+  // If real API mode: reject mock IDs like 'evt-1' (not UUIDs)
+  if (!config.features.useMockData) {
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(stored)) {
+      window.localStorage.removeItem('munar_current_event_id');
+      return null;
+    }
+  }
+  return stored;
 };
 
 export const setCurrentEventId = (eventId: string) => {

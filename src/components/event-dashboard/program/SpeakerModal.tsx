@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../ui/button';
 import { Speaker } from '../types';
-import { X, Upload, User, Briefcase, Link as LinkIcon, Linkedin, Twitter, Globe, Star } from 'lucide-react';
+import { X, Upload, User, Briefcase, Link as LinkIcon, Linkedin, Twitter, Globe, Star, Loader2 } from 'lucide-react';
 import { Switch } from '../../ui/switch';
 import { toast } from 'sonner@2.0.3';
 
 interface SpeakerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (speaker: Partial<Speaker>) => void;
+  onSave: (speaker: Partial<Speaker>) => void | Promise<void>;
   speaker?: Speaker;
 }
 
@@ -26,6 +26,7 @@ export const SpeakerModal: React.FC<SpeakerModalProps> = ({ isOpen, onClose, onS
   });
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (speaker) {
@@ -49,14 +50,21 @@ export const SpeakerModal: React.FC<SpeakerModalProps> = ({ isOpen, onClose, onS
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.role) {
       toast.error("Name and Role are required");
       return;
     }
-    onSave({ ...formData, imageUrl: imagePreview || undefined });
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave({ ...formData, imageUrl: imagePreview || undefined });
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,9 +250,13 @@ export const SpeakerModal: React.FC<SpeakerModalProps> = ({ isOpen, onClose, onS
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-white dark:bg-slate-900">
-          <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
-          <Button type="submit" form="speaker-form" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            {speaker ? 'Save Changes' : 'Create Speaker'}
+          <Button variant="ghost" onClick={onClose} type="button" disabled={isSaving}>Cancel</Button>
+          <Button type="submit" form="speaker-form" className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSaving}>
+            {isSaving ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />{speaker ? 'Saving...' : 'Creating...'}</>
+            ) : (
+              speaker ? 'Save Changes' : 'Create Speaker'
+            )}
           </Button>
         </div>
       </div>

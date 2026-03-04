@@ -2,7 +2,7 @@
 // Website settings: SEO, URL slug, access control, and feature toggles
 
 import React from 'react';
-import { Globe, Lock, Users, Search, Link, AlertCircle } from 'lucide-react';
+import { Globe, Lock, Users, Search, Link, AlertCircle, Share2 } from 'lucide-react';
 import { WebsiteConfig, AccessControl } from '../../../modules/website/types';
 import { cn } from '../../ui/utils';
 
@@ -226,6 +226,29 @@ export function SettingsPanel({ config, eventSlug, onUpdateConfig }: SettingsPan
               </p>
             </div>
           )}
+        </div>
+
+        {/* Social Links */}
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 mb-1">
+            <Share2 className="w-4 h-4 text-slate-400" />
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Social Links
+            </p>
+          </div>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mb-2">
+            Add social media links to display in the website footer.
+          </p>
+
+          {(['twitter', 'instagram', 'facebook', 'linkedin', 'youtube', 'tiktok'] as const).map((platform) => (
+            <TextField
+              key={platform}
+              label={platform.charAt(0).toUpperCase() + platform.slice(1)}
+              value={config.socialLinks?.[platform] || ''}
+              placeholder={`https://${platform}.com/...`}
+              onChange={(v) => onUpdateConfig({ socialLinks: { ...config.socialLinks, [platform]: v } })}
+            />
+          ))}
         </div>
 
         {/* Status */}

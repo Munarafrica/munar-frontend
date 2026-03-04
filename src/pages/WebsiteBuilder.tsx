@@ -210,6 +210,7 @@ export function WebsiteBuilder() {
           activeTab={activeTab}
           selectedSection={selectedSection}
           eventSlug={eventSlug}
+          eventId={eventId}
           onTabChange={setActiveTab}
           onSelectSection={(id) => {
             setSelectedSection(id);

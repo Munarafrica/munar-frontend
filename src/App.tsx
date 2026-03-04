@@ -34,7 +34,8 @@ export type Page =
   | 'gallery-public'
   | 'sponsors-management'
   | 'event-analytics'
-  | 'website-builder';
+  | 'website-builder'
+  | 'change-password';
 
 function App() {
   return <RouterProvider router={router} />;

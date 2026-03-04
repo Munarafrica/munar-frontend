@@ -8,7 +8,7 @@ interface AuthLayoutProps {
 
 export const AuthLayout = ({ children }: AuthLayoutProps) => {
   return (
-    <div className="flex min-h-screen w-full bg-[#f8fafc] overflow-hidden relative p-4 md:p-0">
+    <div className="flex min-h-screen w-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden relative p-4 md:p-0">
       {/* Left Panel - Image (Hidden on mobile, visible on lg screens) */}
       <div className="hidden lg:flex fixed left-4 top-4 bottom-4 w-[684px] rounded-[16px] overflow-hidden flex-col justify-between p-8 z-10">
         <div className="absolute inset-0 z-0">

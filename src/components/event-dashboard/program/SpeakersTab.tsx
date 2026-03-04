@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
 import { Speaker, Session } from '../types';
 import { Button } from '../../ui/button';
-import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Linkedin, Twitter, Globe, User, Copy } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Edit2, Trash2, Linkedin, Twitter, Globe, User, Copy, Loader2 } from 'lucide-react';
 import { SpeakerModal } from './SpeakerModal';
 import { cn } from '../../ui/utils';
 
 interface SpeakersTabProps {
   speakers: Speaker[];
   sessions: Session[];
-  onAddSpeaker: (speaker: Partial<Speaker>) => void;
-  onEditSpeaker: (speaker: Speaker) => void;
+  isLoading?: boolean;
+  onAddSpeaker: (speaker: Partial<Speaker>) => void | Promise<void>;
+  onEditSpeaker: (speaker: Speaker) => void | Promise<void>;
   onDeleteSpeaker: (id: string) => void;
 }
 
-export const SpeakersTab: React.FC<SpeakersTabProps> = ({ speakers, sessions, onAddSpeaker, onEditSpeaker, onDeleteSpeaker }) => {
+export const SpeakersTab: React.FC<SpeakersTabProps> = ({ speakers, sessions, isLoading, onAddSpeaker, onEditSpeaker, onDeleteSpeaker }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSpeaker, setEditingSpeaker] = useState<Speaker | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,7 +77,11 @@ export const SpeakersTab: React.FC<SpeakersTabProps> = ({ speakers, sessions, on
       </div>
 
       {/* Grid / List */}
-      {filteredSpeakers.length === 0 ? (
+      {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+          </div>
+      ) : filteredSpeakers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl text-center">
               <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
                   <User className="w-8 h-8 text-slate-300 dark:text-slate-500" />

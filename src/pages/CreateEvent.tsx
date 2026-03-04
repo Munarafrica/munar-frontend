@@ -85,6 +85,8 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
   const [errors, setErrors] = useState<Partial<Record<keyof EventFormData, string>>>({});
   const [categoryInput, setCategoryInput] = useState("");
   const [showMapModal, setShowMapModal] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const popularTags = ["Conference", "Workshop", "Networking", "Tech", "Music", "Sports", "Art", "Food"];
@@ -189,6 +191,8 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
 
   const handleContinue = async () => {
     if (!validateForm()) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
 
     const coverImageUrl = formData.coverImage
       ? await readCoverImage(formData.coverImage)
@@ -238,8 +242,15 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
       }
 
       onContinue?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save event", error);
+      const message =
+        error?.error?.message ||
+        error?.message ||
+        "Failed to save event. Please try again.";
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -720,19 +731,28 @@ export const CreateEvent = ({ onClose, onContinue, onNavigate }: CreateEventProp
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 pt-6 mt-8 border-t border-[#e5e5e5] dark:border-slate-800">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2.5 text-[#64748b] dark:text-slate-400 hover:text-[#0f172a] dark:hover:text-slate-200 font-medium text-[14px] transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleContinue}
-            className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white font-medium text-[14px] rounded-lg shadow-sm shadow-purple-200 dark:shadow-none transition-all"
-          >
-            Continue
-          </button>
+        <div className="flex flex-col gap-3 pt-6 mt-8 border-t border-[#e5e5e5] dark:border-slate-800">
+          {submitError && (
+            <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+              {submitError}
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <button 
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 text-[#64748b] dark:text-slate-400 hover:text-[#0f172a] dark:hover:text-slate-200 font-medium text-[14px] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleContinue}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium text-[14px] rounded-lg shadow-sm shadow-purple-200 dark:shadow-none transition-all"
+            >
+              {isSubmitting ? "Saving..." : "Continue"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,24 +1,68 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
-import { Save, Info } from 'lucide-react';
+import { Save, Info, Loader2 } from 'lucide-react';
 import { Switch } from '../ui/switch';
+import { ticketsService } from '../../services';
+import { toast } from 'sonner';
 
-export const TicketSettingsTab: React.FC = () => {
+interface TicketSettingsTabProps {
+  eventId: string;
+}
+
+export const TicketSettingsTab: React.FC<TicketSettingsTabProps> = ({ eventId }) => {
   const [settings, setSettings] = useState({
     enableTransfers: true,
     enableResale: false,
-    resaleCap: 10, // 10% above face value
-    refundPolicy: 'flexible', // flexible, strict, none
-    supportEmail: 'support@munar.site',
-    currency: 'NGN'
+    resaleCap: 10,
+    refundPolicy: 'flexible',
+    supportEmail: '',
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load settings from API
+  useEffect(() => {
+    if (!eventId) return;
+    setIsLoading(true);
+    ticketsService.getSettings(eventId)
+      .then((data) => setSettings({
+        enableTransfers: data.enableTransfers ?? true,
+        enableResale: data.enableResale ?? false,
+        resaleCap: data.resaleCap ?? 10,
+        refundPolicy: data.refundPolicy ?? 'flexible',
+        supportEmail: data.supportEmail ?? '',
+      }))
+      .catch(() => toast.error('Failed to load settings'))
+      .finally(() => setIsLoading(false));
+  }, [eventId]);
 
   const updateSetting = (key: string, value: any) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     setHasChanges(true);
   };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await ticketsService.updateSettings(eventId, settings);
+      setHasChanges(false);
+      toast.success('Settings saved');
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -113,12 +157,12 @@ export const TicketSettingsTab: React.FC = () => {
       <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-200 dark:border-slate-800">
           {hasChanges && <span className="text-sm text-amber-600 dark:text-amber-500 animate-pulse">You have unsaved changes</span>}
           <Button 
-            disabled={!hasChanges}
-            onClick={() => setHasChanges(false)}
+            disabled={!hasChanges || isSaving}
+            onClick={handleSave}
             className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
           >
-              <Save className="w-4 h-4" />
-              Save Settings
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? 'Saving...' : 'Save Settings'}
           </Button>
       </div>
     </div>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../../ui/button';
 import { Session, Speaker } from '../types';
-import { X, Calendar, Clock, MapPin, Tag, Users, Check } from 'lucide-react';
+import { X, Calendar, Clock, MapPin, Tag, Users, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { cn } from '../../ui/utils';
 
 interface SessionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (session: Partial<Session>) => void;
+  onSave: (session: Partial<Session>) => void | Promise<void>;
   session?: Session;
   speakers: Speaker[];
 }
@@ -27,6 +27,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ isOpen, onClose, onS
   });
 
   const [isSelectingSpeakers, setIsSelectingSpeakers] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (session) {
@@ -50,7 +51,7 @@ export const SessionModal: React.FC<SessionModalProps> = ({ isOpen, onClose, onS
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title || !formData.date || !formData.startTime || !formData.endTime) {
       toast.error("Please fill in all required fields");
@@ -62,8 +63,15 @@ export const SessionModal: React.FC<SessionModalProps> = ({ isOpen, onClose, onS
        return;
     }
 
-    onSave(formData);
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleSpeaker = (speakerId: string) => {
@@ -284,9 +292,13 @@ export const SessionModal: React.FC<SessionModalProps> = ({ isOpen, onClose, onS
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 bg-white dark:bg-slate-900">
-          <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
-          <Button type="submit" form="session-form" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            {session ? 'Save Changes' : 'Create Session'}
+          <Button variant="ghost" onClick={onClose} type="button" disabled={isSaving}>Cancel</Button>
+          <Button type="submit" form="session-form" className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSaving}>
+            {isSaving ? (
+              <><Loader2 className="w-4 h-4 animate-spin mr-2" />{session ? 'Saving...' : 'Creating...'}</>
+            ) : (
+              session ? 'Save Changes' : 'Create Session'
+            )}
           </Button>
         </div>
       </div>

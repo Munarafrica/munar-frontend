@@ -4,7 +4,7 @@
 import React from 'react';
 import { Layers, Palette, Settings } from 'lucide-react';
 import { WebsiteConfig, WebsiteTheme, SectionId, AccessControl } from '../../modules/website/types';
-import { SectionsPanel } from './panels/SectionsPanel';
+import { SectionsPanel } from './panels/SectionsPanelV2';
 import { DesignPanel } from './panels/DesignPanel';
 import { SettingsPanel } from './panels/SettingsPanel';
 import { DEFAULT_THEME_HORIZON, DEFAULT_THEME_PULSE } from '../../modules/website/types';
@@ -17,6 +17,7 @@ interface BuilderConfigPanelProps {
   activeTab: ConfigPanelTab;
   selectedSection: SectionId | null;
   eventSlug: string;
+  eventId?: string;
   onTabChange: (tab: ConfigPanelTab) => void;
   onSelectSection: (id: SectionId) => void;
   onToggleSection: (id: SectionId) => void;
@@ -37,6 +38,7 @@ export function BuilderConfigPanel({
   activeTab,
   selectedSection,
   eventSlug,
+  eventId,
   onTabChange,
   onSelectSection,
   onToggleSection,
@@ -72,9 +74,11 @@ export function BuilderConfigPanel({
           <SectionsPanel
             config={config}
             selectedSection={selectedSection}
+            eventId={eventId}
             onSelectSection={onSelectSection}
             onToggleSection={onToggleSection}
             onSwapSections={onSwapSections}
+            onUpdateConfig={onUpdateConfig}
           />
         )}
         {activeTab === 'design' && (

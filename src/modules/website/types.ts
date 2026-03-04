@@ -1,10 +1,13 @@
 // Website Module Types
 // Configuration for the Event Website Builder
+// Architecture: Templates are the engine, sections are reusable building blocks
 
 export type WebsiteTemplateId = 'horizon' | 'pulse';
 export type WebsiteStatus = 'draft' | 'published';
 export type AccessControl = 'public' | 'password' | 'private';
 
+// Standard section types (built-in sections)
+// 'custom' is a special marker for where custom blocks are rendered in the template
 export type SectionId =
   | 'hero'
   | 'about'
@@ -17,7 +20,70 @@ export type SectionId =
   | 'forms'
   | 'gallery'
   | 'faq'
-  | 'footer';
+  | 'footer'
+  | 'custom';
+
+// ── Custom content block types ──────────────────────────────────────────────
+
+export type CustomBlockLayout =
+  | 'text-image-left'
+  | 'text-image-right'
+  | 'full-text'
+  | 'image-grid'
+  | 'cta-banner'
+  | 'testimonial';
+
+export interface CustomBlock {
+  id: string;
+  layout: CustomBlockLayout;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  images?: string[];
+  buttonText?: string;
+  buttonUrl?: string;
+  author?: string;
+  authorRole?: string;
+}
+
+// ── Unified Building Block System ───────────────────────────────────────────
+// All sections (standard and custom) are represented as BuildingBlocks
+// This enables custom blocks to be interspersed anywhere among standard sections
+
+export type BuildingBlockType = 'section' | 'custom-block';
+
+export interface BuildingBlock {
+  /** Unique identifier. For sections: 'section-{id}', for custom blocks: 'block-{id}' */
+  id: string;
+  /** Type discriminator */
+  type: BuildingBlockType;
+  /** Display order in the rendered page */
+  order: number;
+  /** Whether this block is visible */
+  visible: boolean;
+  /** For sections: the SectionId; for custom blocks: the CustomBlock */
+  data: SectionId | CustomBlock;
+}
+
+// ── Section Content Overrides ───────────────────────────────────────────────
+// Allow per-section customization of headings, button labels, etc.
+
+export interface SectionOverrides {
+  /** Custom heading text (overrides default) */
+  heading?: string;
+  /** Custom subheading/tagline */
+  subheading?: string;
+  /** Primary button text */
+  buttonText?: string;
+  /** Primary button URL (if different from default) */
+  buttonUrl?: string;
+  /** Secondary button text */
+  secondaryButtonText?: string;
+  /** Secondary button URL */
+  secondaryButtonUrl?: string;
+  /** Custom description/intro text */
+  description?: string;
+}
 
 export interface SectionConfig {
   id: SectionId;
@@ -25,6 +91,8 @@ export interface SectionConfig {
   visible: boolean;
   order: number;
   variant?: string;
+  /** Per-section content overrides */
+  overrides?: SectionOverrides;
 }
 
 export interface WebsiteTheme {
@@ -53,6 +121,71 @@ export const DEFAULT_SECTIONS: SectionConfig[] = [
   { id: 'footer', label: 'Footer', visible: true, order: 11 },
 ];
 
+// ── Building Block Utilities ────────────────────────────────────────────────
+
+/**
+ * Convert sections and custom blocks to unified building blocks array
+ * This enables proper ordering with custom blocks interspersed among sections
+ */
+export function toBuildingBlocks(
+  sections: SectionConfig[],
+  customBlocks: CustomBlock[] = []
+): BuildingBlock[] {
+  const blocks: BuildingBlock[] = [];
+  
+  // Add section blocks
+  sections.forEach((section) => {
+    blocks.push({
+      id: `section-${section.id}`,
+      type: 'section',
+      order: section.order,
+      visible: section.visible,
+      data: section.id,
+    });
+  });
+  
+  // Add custom blocks (they already have ids)
+  customBlocks.forEach((block, idx) => {
+    blocks.push({
+      id: `block-${block.id}`,
+      type: 'custom-block',
+      order: sections.length + idx, // Default to end if no order specified
+      visible: true,
+      data: block,
+    });
+  });
+  
+  return blocks.sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Extract sections and custom blocks from building blocks array
+ */
+export function fromBuildingBlocks(blocks: BuildingBlock[]): {
+  sections: SectionConfig[];
+  customBlocks: CustomBlock[];
+} {
+  const sections: SectionConfig[] = [];
+  const customBlocks: CustomBlock[] = [];
+  
+  blocks.forEach((block) => {
+    if (block.type === 'section') {
+      const sectionId = block.data as SectionId;
+      const defaultSection = DEFAULT_SECTIONS.find((s) => s.id === sectionId);
+      sections.push({
+        id: sectionId,
+        label: defaultSection?.label || sectionId,
+        visible: block.visible,
+        order: block.order,
+      });
+    } else {
+      customBlocks.push(block.data as CustomBlock);
+    }
+  });
+  
+  return { sections, customBlocks };
+}
+
 export interface WebsiteConfig {
   templateId: WebsiteTemplateId;
   status: WebsiteStatus;
@@ -71,6 +204,25 @@ export interface WebsiteConfig {
   logoUrl?: string;
   /** Whether the sticky navbar is shown */
   navbarEnabled?: boolean;
+  /** 
+   * Custom content blocks - can be placed anywhere among sections
+   * Each block has an 'order' property that determines its position
+   */
+  customBlocks?: CustomBlock[];
+  /** 
+   * Unified building blocks array for complete render order control
+   * When present, this takes precedence over sections/customBlocks ordering
+   */
+  buildingBlocks?: BuildingBlock[];
+  /** Social media URLs for the footer */
+  socialLinks?: {
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    linkedin?: string;
+    youtube?: string;
+    tiktok?: string;
+  };
 }
 
 export const DEFAULT_THEME_HORIZON: WebsiteTheme = {

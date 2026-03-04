@@ -37,7 +37,7 @@ export function EventProvider({ children, eventId }: EventProviderProps) {
     checklist: [],
     modules: [],
     activities: [],
-    isLoading: false,
+    isLoading: !!eventId, // Start as loading immediately if we have an eventId to avoid EventNotFound flash
     error: null,
   });
 

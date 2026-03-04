@@ -6,19 +6,21 @@ const svgPaths = {
 };
 
 interface LogoProps {
-  variant?: "dark" | "light";
+  variant?: "dark" | "light" | "auto";
   className?: string;
   showText?: boolean;
 }
 
 export const Logo = ({ variant = "dark", className = "", showText = true }: LogoProps) => {
-  const color = variant === "dark" ? "#525252" : "#FFFFFF";
+  const color = variant === "dark" ? "#525252" : variant === "light" ? "#FFFFFF" : undefined;
+  const fillClass = variant === "auto" ? "fill-current" : "";
+  const textClass = variant === "auto" ? "text-current" : "";
 
   return (
-    <div className={`flex items-end gap-2 ${className}`}>
+    <div className={`flex items-end gap-2 ${className} ${variant === "auto" ? "text-slate-900 dark:text-white" : ""}`}>
       {/* Icon */}
       <div className="relative shrink-0 w-[48.698px] h-[34.457px]">
-        <svg className="block w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 48.6984 34.4567">
+        <svg className={`block w-full h-full ${fillClass}`} fill="none" preserveAspectRatio="none" viewBox="0 0 48.6984 34.4567">
           <path d={svgPaths.leftDiamond} fill={color} />
           <path d={svgPaths.rightDiamond} fill={color} />
         </svg>
@@ -28,8 +30,8 @@ export const Logo = ({ variant = "dark", className = "", showText = true }: Logo
       {showText && (
         <div className="flex flex-col justify-end leading-none h-[34px]">
            <span 
-            className="text-[34px] font-normal tracking-tight leading-none"
-            style={{ color: color }}
+            className={`text-[34px] font-normal tracking-tight leading-none ${textClass}`}
+            style={color ? { color: color } : undefined}
           >
             Munar
           </span>

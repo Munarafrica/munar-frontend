@@ -8,9 +8,17 @@ import { delay, mockForms, mockFormResponses, generateId } from './mock/data';
 export interface CreateFormRequest {
   title: string;
   description?: string;
-  type: 'registration' | 'survey' | 'custom';
+  type: 'registration' | 'survey' | 'feedback' | 'custom';
   fields: FormField[];
   settings?: Partial<FormSettings>;
+}
+
+export interface PublicFormSubmitRequest {
+  respondentName?: string;
+  respondentEmail?: string;
+  answers: Record<string, any>;
+  /** Optional: pass elapsed seconds so analytics can compute avg time */
+  metadata?: { timeToComplete?: number; [key: string]: any };
 }
 
 export interface UpdateFormRequest extends Partial<CreateFormRequest> {
@@ -165,7 +173,8 @@ class FormsService {
       };
     }
 
-    return apiClient.get<PaginatedResponse<FormResponse>>(`/events/${eventId}/forms/${formId}/responses`, { params });
+    const response = await apiClient.get<ApiResponse<PaginatedResponse<FormResponse>>>(`/events/${eventId}/forms/${formId}/responses`, { params });
+    return response.data;
   }
 
   // Get single response
@@ -248,6 +257,82 @@ class FormsService {
     }
 
     const response = await apiClient.get<ApiResponse<any>>(`/events/${eventId}/forms/${formId}/analytics`);
+    return response.data;
+  }
+
+  // ========== PUBLIC (no-auth) ==========
+
+  /** List published forms for an event by its public slug */
+  async getPublicForms(slug: string): Promise<{ event: { id: string; name: string }; forms: Form[] }> {
+    if (config.features.useMockData) {
+      await delay(400);
+      return { event: { id: 'mock-event', name: 'Mock Event' }, forms: mockForms.filter(f => f.status === 'published') };
+    }
+    const response = await apiClient.get<ApiResponse<{ event: { id: string; name: string }; forms: Form[] }>>(`/public/e/${slug}/forms`);
+    return response.data;
+  }
+
+  /** Get a single published form by event slug + form ID */
+  async getPublicFormBySlug(slug: string, formId: string): Promise<Form> {
+    if (config.features.useMockData) {
+      await delay(300);
+      const form = mockForms.find(f => f.id === formId);
+      if (!form) throw new Error('Form not found');
+      return form;
+    }
+    const response = await apiClient.get<ApiResponse<Form>>(`/public/e/${slug}/forms/${formId}`);
+    return response.data;
+  }
+
+  /** Submit a response by event slug + form ID (no auth required) */
+  async submitPublicForm(slug: string, formId: string, data: PublicFormSubmitRequest): Promise<FormResponse> {
+    if (config.features.useMockData) {
+      await delay(600);
+      const form = mockForms.find(f => f.id === formId);
+      if (!form) throw new Error('Form not found');
+      const newResponse = {
+        id: generateId('resp'),
+        formId,
+        respondentName: data.respondentName,
+        respondentEmail: data.respondentEmail,
+        answers: data.answers,
+        submittedAt: new Date().toISOString(),
+      } as FormResponse;
+      mockFormResponses.push(newResponse);
+      return newResponse;
+    }
+    const response = await apiClient.post<ApiResponse<FormResponse>>(`/public/e/${slug}/forms/${formId}/submit`, data);
+    return response.data;
+  }
+
+  /** Get a published form by its share token */
+  async getPublicFormByToken(token: string): Promise<Form> {
+    if (config.features.useMockData) {
+      await delay(300);
+      const form = mockForms[0];
+      if (!form) throw new Error('Form not found');
+      return form;
+    }
+    const response = await apiClient.get<ApiResponse<Form>>(`/public/forms/${token}`);
+    return response.data;
+  }
+
+  /** Submit a response via share token */
+  async submitByToken(token: string, data: PublicFormSubmitRequest): Promise<FormResponse> {
+    if (config.features.useMockData) {
+      await delay(600);
+      const newResponse = {
+        id: generateId('resp'),
+        formId: 'mock-form',
+        respondentName: data.respondentName,
+        respondentEmail: data.respondentEmail,
+        answers: data.answers,
+        submittedAt: new Date().toISOString(),
+      } as FormResponse;
+      mockFormResponses.push(newResponse);
+      return newResponse;
+    }
+    const response = await apiClient.post<ApiResponse<FormResponse>>(`/public/forms/${token}/submit`, data);
     return response.data;
   }
 }

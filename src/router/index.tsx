@@ -20,12 +20,13 @@
 //   /e/:eventSlug/gallery     → Public Gallery
 
 import React from 'react';
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
+import { createBrowserRouter, Navigate, Outlet, useNavigate } from 'react-router-dom';
 
 // App Shell & Layout
 import { AppShell, EventLayout, PublicLayout } from '../components/AppShell';
 import { EventResolver } from '../components/EventResolver';
 import { ModuleGuard } from '../components/ModuleGuard';
+import { RequireAuth, RedirectIfAuth } from '../components/auth/AuthGuard';
 
 // Auth Pages
 import { Login } from '../pages/Login';
@@ -34,6 +35,7 @@ import { EmailVerification } from '../pages/EmailVerification';
 import { ProfileSetup } from '../pages/ProfileSetup';
 import { ForgotPassword } from '../pages/ForgotPassword';
 import { ResetPassword } from '../pages/ResetPassword';
+import { ChangePassword } from '../pages/ChangePassword';
 import { AccountType } from '../pages/AccountType';
 
 // Platform Pages
@@ -58,6 +60,7 @@ import { TicketsPublic } from '../modules/tickets/TicketsPublic';
 import { VotingPublic } from '../modules/voting/VotingPublic';
 import { MerchPublic } from '../modules/merch/MerchPublic';
 import { FormsPublic } from '../modules/forms/FormsPublic';
+import { FormFill } from '../modules/forms/FormFill';
 import { DPMakerPublic } from '../pages/DPMakerPublic';
 import { GalleryPublic } from '../pages/GalleryPublic';
 import { EventWebsitePublic } from '../modules/website/EventWebsitePublic';
@@ -77,12 +80,23 @@ function WithNav({ Component, extraProps }: { Component: React.ComponentType<any
 }
 
 function CreateEventRoute() {
-  const onNavigate = useAppNavigate();
+  const appNavigate = useAppNavigate();
+  const navigate = useNavigate();
+
   return (
     <CreateEvent
-      onClose={() => onNavigate('my-events')}
-      onContinue={() => onNavigate('event-dashboard')}
-      onNavigate={onNavigate}
+      onClose={() => appNavigate('my-events')}
+      onContinue={() => {
+        // At this point CreateEvent has already called setCurrentEventId(created.id)
+        // Read it directly from localStorage so we navigate to the real event URL
+        const eventId = localStorage.getItem('munar_current_event_id');
+        if (eventId) {
+          navigate(`/events/${eventId}`);
+        } else {
+          appNavigate('my-events');
+        }
+      }}
+      onNavigate={appNavigate}
     />
   );
 }
@@ -94,29 +108,32 @@ export const router = createBrowserRouter([
     // Root layout with AppShell (Theme + Auth)
     element: <AppShell />,
     children: [
-      // ── Auth Routes ──────────────────────────────────────────────────
-      { path: '/login', element: <WithNav Component={Login} /> },
-      { path: '/signup', element: <WithNav Component={SignUp} /> },
+      // ── Auth Routes (redirect to /events if already logged in) ─────
+      { path: '/login', element: <RedirectIfAuth><WithNav Component={Login} /></RedirectIfAuth> },
+      { path: '/signup', element: <RedirectIfAuth><WithNav Component={SignUp} /></RedirectIfAuth> },
       { path: '/verify-email', element: <WithNav Component={EmailVerification} /> },
       { path: '/account-type', element: <WithNav Component={AccountType} /> },
       { path: '/profile-setup', element: <WithNav Component={ProfileSetup} /> },
       { path: '/forgot-password', element: <WithNav Component={ForgotPassword} /> },
       { path: '/reset-password', element: <WithNav Component={ResetPassword} /> },
+      { path: '/change-password', element: <RequireAuth><ChangePassword /></RequireAuth> },
 
-      // ── Platform Routes ──────────────────────────────────────────────
+      // ── Platform Routes (require auth) ────────────────────────────────
       { path: '/', element: <Navigate to="/events" replace /> },
-      { path: '/events', element: <WithNav Component={MyEvents} /> },
-      { path: '/events/create', element: <CreateEventRoute /> },
+      { path: '/events', element: <RequireAuth><WithNav Component={MyEvents} /></RequireAuth> },
+      { path: '/events/create', element: <RequireAuth><CreateEventRoute /></RequireAuth> },
 
       // ── Event Admin Routes (wrapped in EventResolver) ────────────────
       {
         path: '/events/:eventId',
         element: (
-          <EventResolver>
-            <EventLayout>
-              <Outlet />
-            </EventLayout>
-          </EventResolver>
+          <RequireAuth>
+            <EventResolver>
+              <EventLayout>
+                <Outlet />
+              </EventLayout>
+            </EventResolver>
+          </RequireAuth>
         ),
         children: [
           { index: true, element: <WithNav Component={EventDashboard} /> },
@@ -177,6 +194,14 @@ export const router = createBrowserRouter([
             element: (
               <ModuleGuard moduleType="forms">
                 <FormsPublic />
+              </ModuleGuard>
+            ),
+          },
+          {
+            path: 'forms/:formId',
+            element: (
+              <ModuleGuard moduleType="forms">
+                <FormFill />
               </ModuleGuard>
             ),
           },

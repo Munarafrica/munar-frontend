@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ChevronDown, ChevronUp, Info, Users, Ticket, DollarSign, Calendar, Eye, Plus, Trash2, Edit2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ChevronDown, ChevronUp, Info, Users, Ticket, DollarSign, Calendar, Eye, Plus, Trash2, Edit2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from './ui/utils';
 import { TicketType, TicketStatus, TicketTypeType, TicketVisibility, Perk } from './event-dashboard/types';
@@ -7,40 +7,61 @@ import { TicketType, TicketStatus, TicketTypeType, TicketVisibility, Perk } from
 interface CreateTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (ticket: Partial<TicketType>) => void;
+  onSave: (ticket: Partial<TicketType>) => void | Promise<void>;
+  /** When provided, puts the modal into edit mode */
+  editTicket?: TicketType | null;
 }
 
-export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, onClose, onSave }) => {
+const EMPTY_FORM: Partial<TicketType> = {
+  type: 'Single',
+  name: '',
+  description: '',
+  isFree: false,
+  price: 0,
+  quantityTotal: 100,
+  quantityUnlimited: false,
+  minPerOrder: 1,
+  maxPerOrder: 10,
+  salesStart: '',
+  salesEnd: '',
+  visibility: 'Public',
+  status: 'On Sale',
+  allowTransfer: true,
+  allowResale: true,
+  transferFeesToGuest: false,
+  refundPolicy: 'Refundable',
+  requireAttendeeInfo: true,
+  groupSize: 1,
+  perks: [],
+};
+
+export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, onClose, onSave, editTicket }) => {
+  const isEditMode = !!editTicket;
   const [activeSection, setActiveSection] = useState<'basic' | 'advanced'>('basic');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [perkInput, setPerkInput] = useState('');
   const [editingPerkId, setEditingPerkId] = useState<string | null>(null);
   const [editingPerkName, setEditingPerkName] = useState('');
   const [showPerkTooltip, setShowPerkTooltip] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form State
-  const [formData, setFormData] = useState<Partial<TicketType>>({
-    type: 'Single',
-    name: '',
-    description: '',
-    isFree: false,
-    price: 0,
-    quantityTotal: 100,
-    quantityUnlimited: false,
-    minPerOrder: 1,
-    maxPerOrder: 10,
-    salesStart: '',
-    salesEnd: '',
-    visibility: 'Public',
-    status: 'Draft',
-    allowTransfer: true,
-    allowResale: true,
-    transferFeesToGuest: false,
-    refundPolicy: 'Refundable',
-    requireAttendeeInfo: true,
-    groupSize: 1,
-    perks: []
-  });
+  const [formData, setFormData] = useState<Partial<TicketType>>(EMPTY_FORM);
+
+  // Reset / pre-populate form when modal opens or editTicket changes
+  useEffect(() => {
+    if (!isOpen) return;
+    if (editTicket) {
+      setFormData({ ...editTicket });
+      setShowAdvanced(true); // Show advanced when editing
+    } else {
+      setFormData({ ...EMPTY_FORM });
+      setShowAdvanced(false);
+    }
+    setPerkInput('');
+    setEditingPerkId(null);
+    setEditingPerkName('');
+  }, [isOpen, editTicket]);
 
   if (!isOpen) return null;
 
@@ -78,11 +99,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Basic validation
     if (!formData.name) return;
-    onSave(formData);
-    onClose();
+    setIsSaving(true);
+    try {
+      await onSave(formData);
+      onClose();
+    } catch {
+      // Error handled by parent
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -93,8 +121,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-800 shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Create Ticket</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Set up your ticket details and pricing</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{isEditMode ? 'Edit Ticket' : 'Create Ticket'}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{isEditMode ? 'Update your ticket details' : 'Set up your ticket details and pricing'}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 dark:text-slate-400">
             <X className="w-5 h-5" />
@@ -410,6 +438,32 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
              </div>
            </section>
 
+           {/* Ticket Status */}
+           <section className="space-y-4 pt-2 border-t border-slate-100 dark:border-slate-800">
+             <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-sm">
+                <Ticket className="w-4 h-4" />
+                <h3>Status</h3>
+             </div>
+             <div className="flex flex-wrap gap-2">
+                 {(['On Sale', 'Draft', 'Hidden'] as const).map((st) => (
+                     <button
+                        key={st}
+                        onClick={() => handleInputChange('status', st)}
+                        className={cn(
+                            "px-4 py-2 rounded-lg border text-sm font-medium transition-all",
+                            formData.status === st 
+                                ? st === 'On Sale'
+                                  ? "bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-600 text-green-700 dark:text-green-400"
+                                  : "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500 text-indigo-700 dark:text-indigo-400"
+                                : "bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
+                        )}
+                     >
+                        {st}
+                     </button>
+                 ))}
+             </div>
+           </section>
+
            {/* Advanced Options Toggle */}
            <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
              <button 
@@ -524,8 +578,14 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({ isOpen, on
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
-           <Button variant="ghost" onClick={onClose} className="text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200">Cancel</Button>
-           <Button onClick={handleSave} className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700">Create Ticket</Button>
+           <Button variant="ghost" onClick={onClose} className="text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200" disabled={isSaving}>Cancel</Button>
+           <Button onClick={handleSave} className="bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-700" disabled={isSaving}>
+             {isSaving ? (
+               <><Loader2 className="w-4 h-4 animate-spin mr-2" />{isEditMode ? 'Saving...' : 'Creating...'}</>
+             ) : (
+               isEditMode ? 'Save Changes' : 'Create Ticket'
+             )}
+           </Button>
         </div>
       </div>
     </div>

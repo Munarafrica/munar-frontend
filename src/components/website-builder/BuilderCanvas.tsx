@@ -18,20 +18,17 @@ interface BuilderCanvasProps {
   onSectionClick?: (id: SectionId) => void;
 }
 
-const PREVIEW_WIDTHS: Record<PreviewMode, { container: string; iframe: string; label: string }> = {
+const PREVIEW_WIDTHS: Record<PreviewMode, { maxWidth: string; label: string }> = {
   desktop: {
-    container: 'w-full',
-    iframe: 'w-full',
+    maxWidth: '100%',
     label: 'Desktop',
   },
   tablet: {
-    container: 'max-w-[768px] mx-auto',
-    iframe: 'w-full',
+    maxWidth: '768px',
     label: 'Tablet (768px)',
   },
   mobile: {
-    container: 'max-w-[375px] mx-auto',
-    iframe: 'w-full',
+    maxWidth: '375px',
     label: 'Mobile (375px)',
   },
 };
@@ -86,7 +83,10 @@ export function BuilderCanvas({
 
       {/* Canvas container with shadow */}
       <div className="flex-1 px-4 pb-8">
-        <div className={pw.container}>
+        <div
+          className="w-full mx-auto transition-all duration-300 ease-in-out"
+          style={{ maxWidth: pw.maxWidth }}
+        >
           <div className="relative rounded-xl overflow-hidden shadow-2xl bg-white" style={{ minHeight: 600 }}>
             {!isReady && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-50/80 dark:bg-slate-900/80 z-10 backdrop-blur-sm">
@@ -100,7 +100,7 @@ export function BuilderCanvas({
               ref={iframeRef}
               src={previewUrl}
               title="Website Preview"
-              className={`${pw.iframe} border-0`}
+              className="w-full border-0"
               style={{ height: '100vh', minHeight: 600, display: 'block' }}
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             />
