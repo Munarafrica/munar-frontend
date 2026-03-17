@@ -1,7 +1,7 @@
 // Voting Service - handles campaigns, categories, contestants, votes, and analytics
 import { config } from '../config';
 import { apiClient } from '../lib/api-client';
-import { PaginatedResponse } from '../types/api';
+import { ApiResponse, PaginatedResponse } from '../types/api';
 import {
   VotingCampaign,
   VotingCategory,
@@ -50,7 +50,8 @@ export async function getCampaigns(eventId: string): Promise<VotingCampaign[]> {
     return getMockCampaigns().filter(c => c.eventId === eventId);
   }
   
-  return await apiClient.get<VotingCampaign[]>(`/events/${eventId}/voting/campaigns`);
+  const response = await apiClient.get<ApiResponse<VotingCampaign[]>>(`/events/${eventId}/voting/campaigns`);
+  return response.data;
 }
 
 export async function getCampaign(eventId: string, campaignId: string): Promise<VotingCampaign> {
@@ -61,7 +62,8 @@ export async function getCampaign(eventId: string, campaignId: string): Promise<
     return campaign;
   }
   
-  return await apiClient.get<VotingCampaign>(`/events/${eventId}/voting/campaigns/${campaignId}`);
+  const response = await apiClient.get<ApiResponse<VotingCampaign>>(`/events/${eventId}/voting/campaigns/${campaignId}`);
+  return response.data;
 }
 
 export async function createCampaign(eventId: string, data: CreateCampaignRequest): Promise<VotingCampaign> {
@@ -124,7 +126,8 @@ export async function createCampaign(eventId: string, data: CreateCampaignReques
     return newCampaign;
   }
   
-  return await apiClient.post<VotingCampaign>(`/events/${eventId}/voting/campaigns`, data);
+  const response = await apiClient.post<ApiResponse<VotingCampaign>>(`/events/${eventId}/voting/campaigns`, data);
+  return response.data;
 }
 
 export async function updateCampaign(
@@ -140,7 +143,8 @@ export async function updateCampaign(
     return updated;
   }
   
-  return await apiClient.patch<VotingCampaign>(`/events/${eventId}/voting/campaigns/${campaignId}`, data);
+  const response = await apiClient.patch<ApiResponse<VotingCampaign>>(`/events/${eventId}/voting/campaigns/${campaignId}`, data);
+  return response.data;
 }
 
 export async function deleteCampaign(eventId: string, campaignId: string): Promise<void> {
@@ -208,7 +212,8 @@ export async function duplicateCampaign(eventId: string, campaignId: string): Pr
     return duplicated;
   }
   
-  return await apiClient.post<VotingCampaign>(`/events/${eventId}/voting/campaigns/${campaignId}/duplicate`);
+  const response = await apiClient.post<ApiResponse<VotingCampaign>>(`/events/${eventId}/voting/campaigns/${campaignId}/duplicate`);
+  return response.data;
 }
 
 // ============ Categories ============
@@ -242,10 +247,11 @@ export async function createCategory(
     return newCategory;
   }
   
-  return await apiClient.post<VotingCategory>(
+  const response = await apiClient.post<ApiResponse<VotingCategory>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/categories`,
     data
   );
+  return response.data;
 }
 
 export async function updateCategory(
@@ -270,10 +276,11 @@ export async function updateCategory(
     return updated;
   }
   
-  return await apiClient.patch<VotingCategory>(
+  const response = await apiClient.patch<ApiResponse<VotingCategory>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/categories/${categoryId}`,
     data
   );
+  return response.data;
 }
 
 export async function deleteCategory(
@@ -367,10 +374,11 @@ export async function createContestant(
     return newContestant;
   }
   
-  return await apiClient.post<Contestant>(
+  const response = await apiClient.post<ApiResponse<Contestant>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/categories/${categoryId}/contestants`,
     data
   );
+  return response.data;
 }
 
 export async function updateContestant(
@@ -403,10 +411,11 @@ export async function updateContestant(
     return updatedContestant;
   }
   
-  return await apiClient.patch<Contestant>(
+  const response = await apiClient.patch<ApiResponse<Contestant>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/contestants/${contestantId}`,
     data
   );
+  return response.data;
 }
 
 export async function deleteContestant(
@@ -469,10 +478,11 @@ export async function moveContestant(
     return movedContestant;
   }
   
-  return await apiClient.post<Contestant>(
+  const response = await apiClient.post<ApiResponse<Contestant>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/contestants/${contestantId}/move`,
     { categoryId: newCategoryId }
   );
+  return response.data;
 }
 
 // ============ Voting ============
@@ -499,7 +509,8 @@ export async function castVote(campaignId: string, data: CastVoteRequest): Promi
     return newVote;
   }
   
-  return await apiClient.post<Vote>(`/voting/campaigns/${campaignId}/vote`, data);
+  const response = await apiClient.post<ApiResponse<Vote>>(`/voting/campaigns/${campaignId}/vote`, data);
+  return response.data;
 }
 
 export async function getVotes(
@@ -543,7 +554,7 @@ export async function getVotes(
   return await apiClient.get<PaginatedResponse<Vote>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/votes`,
     { params: filters as Record<string, string | number | boolean | undefined> }
-  );
+  ) as unknown as PaginatedResponse<Vote>;
 }
 
 export async function getContestantVotes(
@@ -556,10 +567,10 @@ export async function getContestantVotes(
     return getContestantVoteCount(contestantId);
   }
   
-  const response = await apiClient.get<{ count: number }>(
+  const response = await apiClient.get<ApiResponse<{ count: number }>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/contestants/${contestantId}/votes`
   );
-  return response.count;
+  return response.data.count;
 }
 
 // ============ Rounds ============
@@ -595,10 +606,11 @@ export async function createRound(
     return newRound;
   }
   
-  return await apiClient.post<VotingRound>(
+  const response = await apiClient.post<ApiResponse<VotingRound>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/rounds`,
     data
   );
+  return response.data;
 }
 
 export async function updateRound(
@@ -623,10 +635,11 @@ export async function updateRound(
     return updated;
   }
   
-  return await apiClient.patch<VotingRound>(
+  const response = await apiClient.patch<ApiResponse<VotingRound>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/rounds/${roundId}`,
     data
   );
+  return response.data;
 }
 
 export async function startRound(
@@ -685,7 +698,8 @@ export async function getVotingAnalytics(
     ? `/events/${eventId}/voting/campaigns/${campaignId}/analytics`
     : `/events/${eventId}/voting/analytics`;
   
-  return await apiClient.get<VotingAnalytics>(url);
+  const response = await apiClient.get<ApiResponse<VotingAnalytics>>(url);
+  return response.data;
 }
 
 export async function getResults(
@@ -709,7 +723,8 @@ export async function getResults(
     ? `/events/${eventId}/voting/campaigns/${campaignId}/rounds/${roundId}/results`
     : `/events/${eventId}/voting/campaigns/${campaignId}/results`;
   
-  return await apiClient.get<ContestantResult[]>(url);
+  const response = await apiClient.get<ApiResponse<ContestantResult[]>>(url);
+  return response.data;
 }
 
 export async function exportResults(
@@ -737,7 +752,8 @@ export async function getVotingSettings(eventId: string): Promise<VotingSettings
     return mockVotingSettings;
   }
   
-  return await apiClient.get<VotingSettings>(`/events/${eventId}/voting/settings`);
+  const response = await apiClient.get<ApiResponse<VotingSettings>>(`/events/${eventId}/voting/settings`);
+  return response.data;
 }
 
 export async function updateVotingSettings(
@@ -749,7 +765,8 @@ export async function updateVotingSettings(
     return { ...mockVotingSettings, ...data };
   }
   
-  return await apiClient.patch<VotingSettings>(`/events/${eventId}/voting/settings`, data);
+  const response = await apiClient.patch<ApiResponse<VotingSettings>>(`/events/${eventId}/voting/settings`, data);
+  return response.data;
 }
 
 // ============ Vote Packages ============
@@ -783,10 +800,11 @@ export async function createVotePackage(
     return newPackage;
   }
   
-  return await apiClient.post<VotePackage>(
+  const response = await apiClient.post<ApiResponse<VotePackage>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/packages`,
     data
   );
+  return response.data;
 }
 
 export async function updateVotePackage(
@@ -811,10 +829,11 @@ export async function updateVotePackage(
     return updated;
   }
   
-  return await apiClient.patch<VotePackage>(
+  const response = await apiClient.patch<ApiResponse<VotePackage>>(
     `/events/${eventId}/voting/campaigns/${campaignId}/packages/${packageId}`,
     data
   );
+  return response.data;
 }
 
 export async function deleteVotePackage(

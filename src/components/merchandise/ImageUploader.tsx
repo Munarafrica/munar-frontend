@@ -137,7 +137,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             <img
               src={image.url}
               alt={`Product image ${index + 1}`}
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain p-1"
             />
             
             {/* Overlay */}

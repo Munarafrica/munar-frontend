@@ -11,3 +11,12 @@ export { useVotes } from './useVotes';
 export { useVotingAnalytics } from './useVotingAnalytics';
 export { useSponsors } from './useSponsors';
 export { useEventAnalytics } from './useAnalytics';
+export {
+  useFinanceOverview,
+  useEarnings,
+  useTransactions,
+  usePayouts,
+  useBankAccounts,
+  useDisputes,
+  useFinanceNotifications,
+} from './useFinance';

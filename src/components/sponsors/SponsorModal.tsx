@@ -118,6 +118,7 @@ export const SponsorModal: React.FC<SponsorModalProps> = ({ open, onOpenChange, 
                 value={logoUrl}
                 onChange={setLogoUrl}
                 aspectRatio="landscape"
+                maxWidth="max-w-xs"
                 placeholder="Click to upload logo"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400">Recommended: 430×215 PNG/SVG with transparent background.</p>
@@ -126,8 +127,8 @@ export const SponsorModal: React.FC<SponsorModalProps> = ({ open, onOpenChange, 
             {logoUrl && (
               <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3">
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 font-medium">Preview</p>
-                <div className="h-28 rounded-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center p-3">
-                  <img src={logoUrl} alt="Logo preview" className="max-h-full max-w-full object-contain" />
+                <div className="h-28 shrink-0 rounded-md bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-center p-3 relative overflow-hidden">
+                  <img src={logoUrl} alt="Logo preview" className="absolute inset-0 w-full h-full object-contain p-2" />
                 </div>
               </div>
             )}

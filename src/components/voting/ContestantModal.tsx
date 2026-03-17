@@ -114,12 +114,13 @@ export const ContestantModal: React.FC<ContestantModalProps> = ({
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Photo
             </label>
-            <div className="w-32 mx-auto">
+            <div className="w-32 h-32 shrink-0 mx-auto">
               <ImageUploader
                 value={formData.imageUrl}
                 onChange={handleImageChange}
                 aspectRatio="square"
                 maxSizeMB={5}
+                maxWidth="w-full"
                 placeholder="Upload photo"
               />
             </div>

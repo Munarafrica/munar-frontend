@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Logo } from "../ui/Logo";
 import { HelpIcon, MenuIcon, NotificationIcon, SettingsIcon } from "../icons";
+import { Wallet } from "lucide-react";
 import { Page } from "../../App";
 import { ModeToggle } from "../ui/mode-toggle";
 import { useAuth } from "../../contexts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface TopBarProps {
   onNavigate?: (page: Page) => void;
@@ -13,6 +14,10 @@ interface TopBarProps {
 export const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isFinancePage = location.pathname.startsWith('/finance');
+  const isSettingsPage = location.pathname.startsWith('/settings');
+  const isEventsPage = !isFinancePage && !isSettingsPage;
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -57,15 +62,26 @@ export const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
         {/* Navigation */}
         <div className="hidden md:flex items-center gap-1">
           <div 
-            onClick={() => onNavigate?.('my-events')}
-            className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 transition-colors"
+            onClick={() => navigate('/events')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${
+              isEventsPage
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+            }`}
           >
             <MenuIcon className="size-4" />
-            <span className="font-semibold text-sm">Events</span>
+            <span className={`text-sm ${isEventsPage ? 'font-semibold' : 'font-medium'}`}>Events</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-            <MenuIcon className="size-4" />
-            <span className="font-medium text-sm">Finance</span>
+          <div 
+            onClick={() => navigate('/finance')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full cursor-pointer transition-colors ${
+              isFinancePage
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+            }`}
+          >
+            <Wallet className="size-4" />
+            <span className={`text-sm ${isFinancePage ? 'font-semibold' : 'font-medium'}`}>Finance</span>
           </div>
         </div>
       </div>
@@ -79,7 +95,11 @@ export const TopBar: React.FC<TopBarProps> = ({ onNavigate }) => {
             <button className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
               <HelpIcon className="size-5" />
             </button>
-            <button className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 transition-colors rounded-full hover:bg-slate-50 dark:hover:bg-slate-800">
+            <button
+              onClick={() => navigate('/settings')}
+              className={`p-2 transition-colors rounded-full ${location.pathname.startsWith('/settings') ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+              aria-label="Open settings"
+            >
               <SettingsIcon className="size-5" />
             </button>
             

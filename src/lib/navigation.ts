@@ -31,7 +31,9 @@ export type LegacyPage =
   | 'sponsors-management'
   | 'event-analytics'
   | 'website-builder'
-  | 'change-password';
+  | 'finance-management'
+  | 'change-password'
+  | 'settings';
 
 /**
  * Maps old page names to new React Router paths.
@@ -68,6 +70,10 @@ function getRoutePath(page: LegacyPage, eventId?: string): string {
     'dp-maker-admin': `/events/${eid}/dp-maker`,
     'gallery-admin': `/events/${eid}/gallery`,
     'event-analytics': `/events/${eid}/analytics`,
+
+    // Platform routes (non-event)
+    'finance-management': '/finance',
+    'settings': '/settings',
 
     // Public routes
     'public-vote': `/e/${eid}/voting`,

@@ -106,10 +106,10 @@ export const SpeakerModal: React.FC<SpeakerModalProps> = ({ isOpen, onClose, onS
                   Profile Photo
                 </label>
                 <div 
-                  className="w-32 h-32 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors relative overflow-hidden group"
+                  className="w-32 h-32 shrink-0 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-colors relative overflow-hidden group"
                 >
                   {imagePreview ? (
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <img src={imagePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <>
                       <User className="w-8 h-8 text-slate-400 mb-1" />

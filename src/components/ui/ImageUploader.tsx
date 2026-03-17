@@ -9,6 +9,7 @@ export interface ImageUploaderProps {
   className?: string;
   aspectRatio?: 'square' | 'portrait' | 'landscape';
   maxSizeMB?: number;
+  maxWidth?: string;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -19,6 +20,7 @@ export function ImageUploader({
   className,
   aspectRatio = 'square',
   maxSizeMB = 5,
+  maxWidth,
   placeholder = 'Click to upload or drag and drop',
   disabled = false,
 }: ImageUploaderProps) {
@@ -111,7 +113,7 @@ export function ImageUploader({
   };
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('space-y-2', maxWidth, className)}>
       <div
         onClick={handleClick}
         onDragEnter={handleDragEnter}
@@ -119,7 +121,7 @@ export function ImageUploader({
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={cn(
-          'relative rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden',
+          'relative w-full rounded-xl border-2 border-dashed transition-all cursor-pointer overflow-hidden',
           aspectRatioClasses[aspectRatio],
           isDragging
             ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30'
@@ -142,7 +144,7 @@ export function ImageUploader({
             <img
               src={value}
               alt="Uploaded"
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain p-1"
             />
             {!disabled && (
               <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
